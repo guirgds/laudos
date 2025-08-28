@@ -1,0 +1,35 @@
+# Node modules
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+
+# SQLite database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Electron build output
+/dist
+/build
+/out
+
+# VS Code settings
+.vscode/
+
+# Cache
+.cache/
+*.tmp
+
+# Others
+package-lock.json
