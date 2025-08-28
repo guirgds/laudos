@@ -1,16 +1,36 @@
 {
   "name": "laudos-app",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Aplicativo para geração de laudos médicos",
+  "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "electron",
+    "laudos",
+    "médicos"
+  ],
+  "author": "Seu Nome",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
   "dependencies": {
-    "better-sqlite3": "^12.2.0",
-    "electron": "^37.4.0"
+    "sqlite3": "^5.1.6"
+  },
+  "build": {
+    "appId": "com.seunome.laudos-app",
+    "productName": "Laudos App",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/**/*"
+    ]
   }
 }
