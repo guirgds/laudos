@@ -1,0 +1,77 @@
+/* Formulário de Laudo */
+#laudo-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#laudo-form label {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--dark);
+}
+
+#laudo-form input,
+#laudo-form textarea,
+#laudo-form select {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+    transition: border-color 0.3s;
+}
+
+#laudo-form input:focus,
+#laudo-form textarea:focus,
+#laudo-form select:focus {
+    border-color: var(--secondary);
+    outline: none;
+}
+
+#laudo-form textarea {
+    resize: vertical;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .laudos-list {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
+
+    .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    #laudo-form {
+        padding: 15px;
+    }
+
+    .laudo-card {
+        padding: 12px;
+    }
+
+    button {
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+}

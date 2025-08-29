@@ -10,6 +10,8 @@ const loadingView = document.getElementById('loading-view');
 const laudosList = document.getElementById('laudos-list');
 const btnNew = document.getElementById('btn-new');
 const btnList = document.getElementById('btn-list');
+const btnCancel = document.getElementById('btn-cancel');
+const laudoForm = document.getElementById('laudo-form');
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,8 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Event listeners
-btnNew.addEventListener('click', showFormView);
+btnNew.addEventListener('click', () => showFormView());
 btnList.addEventListener('click', showListView);
+btnCancel.addEventListener('click', showListView);
+laudoForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await saveOrUpdateLaudo();
+});
 
 // Funções de navegação
 function showFormView(id = null) {
@@ -82,25 +89,40 @@ async function loadLaudoForEditing(id) {
     }
 }
 
-async function saveLaudo() {
+async function saveOrUpdateLaudo() {
     // Coletar dados do formulário
-    const form = document.getElementById('laudo-form');
-    const formDataObj = new FormData(form);
-    
+    const formDataObj = new FormData(laudoForm);
     formData = {};
     for (let [key, value] of formDataObj.entries()) {
-        formData[key] = value;
+        formData[key] = value.trim();
     }
-    
-    // Calcular IMC
+
+    // Validação mínima
+    if (!formData.numero_processo || !formData.reclamante) {
+        showNotification('Número do processo e reclamante são obrigatórios.', 'error');
+        return;
+    }
+
+    // Calcular IMC se altura e peso forem preenchidos
     const altura = parseFloat(formData.altura);
     const peso = parseFloat(formData.peso);
-    formData.imc = (peso / (altura * altura)).toFixed(2);
-    
-    // Salvar no banco de dados
+    if (altura && peso) {
+        formData.imc = (peso / (altura * altura)).toFixed(2);
+    } else {
+        formData.imc = null;
+    }
+
     showLoading();
     try {
-        const result = await window.electronAPI.saveLaudo(formData);
+        let result;
+        if (editingId) {
+            // Atualizar
+            result = await window.electronAPI.updateLaudo(editingId, formData);
+        } else {
+            // Salvar novo
+            result = await window.electronAPI.saveLaudo(formData);
+        }
+
         if (result.success) {
             showNotification('Laudo salvo com sucesso!', 'success');
             showListView();
@@ -178,31 +200,25 @@ function renderLaudosList(laudos) {
 }
 
 function populateForm(data) {
-    // Preencher todos os campos do formulário com os dados
     Object.keys(data).forEach(key => {
         const element = document.getElementById(key);
         if (element && data[key] !== null) {
             element.value = data[key];
         }
     });
-    
-    // Mostrar o formulário
     formView.style.display = 'block';
     loadingView.style.display = 'none';
 }
 
 function resetForm() {
-    const form = document.getElementById('laudo-form');
-    form.reset();
-    
-    // Definir valores padrão
+    laudoForm.reset();
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('data_pericia').value = today;
-    document.getElementById('data_laudo').value = today;
-    
     const now = new Date();
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
+
+    document.getElementById('data_pericia').value = today;
+    document.getElementById('data_laudo').value = today;
     document.getElementById('hora_pericia').value = `${hours}:${minutes}`;
 }
 
@@ -214,24 +230,17 @@ function formatDate(dateString) {
 }
 
 function showNotification(message, type) {
-    // Remove notificações existentes
-    const existingNotifications = document.querySelectorAll('.notification');
-    existingNotifications.forEach(notification => notification.remove());
+    const existing = document.querySelectorAll('.notification');
+    existing.forEach(n => n.remove());
     
-    // Cria nova notificação
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
     
     document.body.appendChild(notification);
-    
-    // Remove após 3 segundos
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
+    setTimeout(() => notification.remove(), 3000);
 }
 
 function initApp() {
-    // Inicializar qualquer configuração necessária
     console.log('Aplicativo inicializado');
 }
