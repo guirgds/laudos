@@ -1,7 +1,7 @@
 // main.js
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const db = require('./database/db'); // ajuste conforme seu caminho real
+const db = require('../../database/db'); // Caminho CORRETO
 
 let mainWindow;
 
@@ -13,10 +13,12 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
-    icon: path.join(__dirname, 'build/icons/icon.ico'),
+    // O caminho do ícone também precisa ser corrigido para a raiz do projeto
+    icon: path.join(__dirname, '../../build/icons/icon.ico'), 
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
+  // Caminho CORRETO para o index.html
+  mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
@@ -48,7 +50,8 @@ app.on('window-all-closed', () => {
 
 ipcMain.handle('load-laudos', async () => {
   try {
-    const laudos = await db.getAllLaudos();
+    // CORREÇÃO: Nome da função
+    const laudos = await db.loadLaudos(); 
     return { success: true, data: laudos };
   } catch (error) {
     console.error(error);
@@ -58,7 +61,8 @@ ipcMain.handle('load-laudos', async () => {
 
 ipcMain.handle('get-laudo', async (event, id) => {
   try {
-    const laudo = await db.getLaudoById(id);
+    // CORREÇÃO: Nome da função
+    const laudo = await db.getLaudo(id); 
     return { success: true, data: laudo };
   } catch (error) {
     console.error(error);
@@ -66,25 +70,20 @@ ipcMain.handle('get-laudo', async (event, id) => {
   }
 });
 
+// O save e o update podem usar a mesma função do db.js
 ipcMain.handle('save-laudo', async (event, laudoData) => {
   try {
     const result = await db.saveLaudo(laudoData);
-    return { success: true, data: { id: result.id } };
+    return { success: true, data: { id: result.id || laudoData.id } };
   } catch (error) {
     console.error(error);
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle('update-laudo', async (event, id, laudoData) => {
-  try {
-    const result = await db.updateLaudo(id, laudoData);
-    return { success: true, data: result };
-  } catch (error) {
-    console.error(error);
-    return { success: false, error: error.message };
-  }
-});
+// A função 'update-laudo' no main.js pode ser removida ou redirecionada,
+// mas vamos mantê-la simples por enquanto e fazer o renderer.js chamar save-laudo
+// tanto para criar quanto para atualizar.
 
 ipcMain.handle('delete-laudo', async (event, id) => {
   try {
@@ -96,17 +95,18 @@ ipcMain.handle('delete-laudo', async (event, id) => {
   }
 });
 
-ipcMain.handle('export-laudo', async (event, laudoData) => {
+// Renomeando para 'export-word' para corresponder ao preload.js
+ipcMain.handle('export-word', async (event, laudoData) => {
   try {
     const { filePath } = await dialog.showSaveDialog(mainWindow, {
-      defaultPath: `laudo-${Date.now()}.docx`,
+      defaultPath: `laudo-${laudoData.numero_processo || Date.now()}.docx`,
       filters: [{ name: 'Documentos Word', extensions: ['docx'] }],
     });
 
     if (!filePath) return { success: false, error: 'Operação cancelada' };
 
-    // Aqui você implementa a geração do Word (docx)
-    // Ex.: gerarDocx(laudoData, filePath)
+    // Lógica para gerar o Word virá aqui
+    console.log(`Salvar laudo em: ${filePath}`);
 
     return { success: true, data: { path: filePath } };
   } catch (error) {
