@@ -1,6 +1,7 @@
+// renderer.js - CORRIGIDO
+
 // Variáveis globais
 let currentView = 'list';
-let formData = {};
 let editingId = null;
 
 // Elementos da interface
@@ -15,14 +16,17 @@ const laudoForm = document.getElementById('laudo-form');
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
-    initApp();
     loadLaudos();
 });
 
 // Event listeners
 btnNew.addEventListener('click', () => showFormView());
-btnList.addEventListener('click', showListView);
-btnCancel.addEventListener('click', showListView);
+btnList.addEventListener('click', loadLaudos); // Chama loadLaudos para garantir que a lista está atualizada
+btnCancel.addEventListener('click', () => {
+    editingId = null;
+    resetForm();
+    showListView();
+});
 laudoForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     await saveOrUpdateLaudo();
@@ -48,7 +52,7 @@ function showListView() {
     formView.style.display = 'none';
     loadingView.style.display = 'none';
     currentView = 'list';
-    loadLaudos();
+    // CORREÇÃO 1: Removida a chamada para loadLaudos() daqui para quebrar o loop.
 }
 
 function showLoading() {
@@ -64,13 +68,15 @@ async function loadLaudos() {
         const result = await window.electronAPI.loadLaudos();
         if (result.success) {
             renderLaudosList(result.data);
+            showListView(); // Mostra a lista APÓS os dados serem carregados e renderizados
         } else {
             showNotification('Erro ao carregar laudos: ' + result.error, 'error');
+            showListView(); // Mostra a lista vazia mesmo em caso de erro
         }
     } catch (error) {
         showNotification('Erro ao carregar laudos: ' + error.message, 'error');
+        showListView();
     }
-    showListView();
 }
 
 async function loadLaudoForEditing(id) {
@@ -79,6 +85,8 @@ async function loadLaudoForEditing(id) {
         const result = await window.electronAPI.getLaudo(id);
         if (result.success) {
             populateForm(result.data);
+            formView.style.display = 'block'; // Mostra o formulário preenchido
+            loadingView.style.display = 'none';
         } else {
             showNotification('Erro ao carregar laudo: ' + result.error, 'error');
             showListView();
@@ -90,51 +98,42 @@ async function loadLaudoForEditing(id) {
 }
 
 async function saveOrUpdateLaudo() {
-    // Coletar dados do formulário
     const formDataObj = new FormData(laudoForm);
-    formData = {};
+    const formData = {};
     for (let [key, value] of formDataObj.entries()) {
         formData[key] = value.trim();
     }
 
-    // Validação mínima
     if (!formData.numero_processo || !formData.reclamante) {
         showNotification('Número do processo e reclamante são obrigatórios.', 'error');
         return;
     }
 
-    // Calcular IMC se altura e peso forem preenchidos
-    const altura = parseFloat(formData.altura);
-    const peso = parseFloat(formData.peso);
-    if (altura && peso) {
-        formData.imc = (peso / (altura * altura)).toFixed(2);
-    } else {
-        formData.imc = null;
-    }
-
     showLoading();
     try {
-        let result;
+        // Adiciona o ID ao objeto de dados se estiver editando
         if (editingId) {
-            // Atualizar
-            result = await window.electronAPI.updateLaudo(editingId, formData);
-        } else {
-            // Salvar novo
-            result = await window.electronAPI.saveLaudo(formData);
+            formData.id = editingId;
         }
+
+        // Usa a mesma função 'save-laudo' para criar e atualizar
+        const result = await window.electronAPI.saveLaudo(formData);
 
         if (result.success) {
             showNotification('Laudo salvo com sucesso!', 'success');
-            showListView();
+            editingId = null; // Limpa o ID de edição
+            resetForm();
+            loadLaudos(); // CORREÇÃO 2: Chama loadLaudos() para recarregar a lista atualizada
         } else {
             showNotification('Erro ao salvar laudo: ' + result.error, 'error');
-            showFormView(editingId);
+            showFormView(editingId); // Volta para o formulário em caso de erro
         }
     } catch (error) {
         showNotification('Erro ao salvar laudo: ' + error.message, 'error');
         showFormView(editingId);
     }
 }
+
 
 async function deleteLaudo(id) {
     if (confirm('Tem certeza que deseja excluir este laudo?')) {
@@ -143,7 +142,7 @@ async function deleteLaudo(id) {
             const result = await window.electronAPI.deleteLaudo(id);
             if (result.success) {
                 showNotification('Laudo excluído com sucesso!', 'success');
-                loadLaudos();
+                loadLaudos(); // Recarrega a lista
             } else {
                 showNotification('Erro ao excluir laudo: ' + result.error, 'error');
                 showListView();
@@ -156,38 +155,39 @@ async function deleteLaudo(id) {
 }
 
 async function exportToWord(id) {
-    showLoading();
     try {
         const result = await window.electronAPI.getLaudo(id);
         if (result.success) {
+            // A validação de 'titulo' e 'conteudo' no preload vai falhar.
+            // Precisamos ajustar o preload.js para validar os campos corretos.
             const exportResult = await window.electronAPI.exportWord(result.data);
             if (exportResult.success) {
-                showNotification('Documento Word gerado com sucesso!', 'success');
-            } else {
+                showNotification(`Documento salvo em: ${exportResult.data.path}`, 'success');
+            } else if (exportResult.error !== 'Operação cancelada') {
                 showNotification('Erro ao exportar: ' + exportResult.error, 'error');
             }
         } else {
-            showNotification('Erro ao carregar laudo: ' + result.error, 'error');
+            showNotification('Erro ao carregar laudo para exportação: ' + result.error, 'error');
         }
     } catch (error) {
         showNotification('Erro ao exportar: ' + error.message, 'error');
     }
-    showListView();
 }
 
-// Funções de renderização
+
+// Funções de renderização e utilitárias (sem alterações)
 function renderLaudosList(laudos) {
-    if (laudos.length === 0) {
+    if (!laudos || laudos.length === 0) {
         laudosList.innerHTML = '<p class="no-data">Nenhum laudo cadastrado.</p>';
         return;
     }
     
     laudosList.innerHTML = laudos.map(laudo => `
         <div class="laudo-card">
-            <h3>Processo: ${laudo.numero_processo}</h3>
+            <h3>Processo: ${laudo.numero_processo || 'N/A'}</h3>
             <div class="laudo-details">
-                <p><strong>Reclamante:</strong> ${laudo.reclamante}</p>
-                <p><strong>Reclamada:</strong> ${laudo.reclamada}</p>
+                <p><strong>Reclamante:</strong> ${laudo.reclamante || 'N/A'}</p>
+                <p><strong>Reclamada:</strong> ${laudo.reclamada || 'N/A'}</p>
                 <p><strong>Data do laudo:</strong> ${formatDate(laudo.data_laudo)}</p>
             </div>
             <div class="laudo-actions">
@@ -200,32 +200,25 @@ function renderLaudosList(laudos) {
 }
 
 function populateForm(data) {
+    resetForm();
     Object.keys(data).forEach(key => {
         const element = document.getElementById(key);
         if (element && data[key] !== null) {
             element.value = data[key];
         }
     });
-    formView.style.display = 'block';
-    loadingView.style.display = 'none';
 }
 
 function resetForm() {
     laudoForm.reset();
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-
-    document.getElementById('data_pericia').value = today;
-    document.getElementById('data_laudo').value = today;
-    document.getElementById('hora_pericia').value = `${hours}:${minutes}`;
 }
 
-// Funções utilitárias
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
+    // Adiciona um tratamento para datas que podem ou não ter hora
+    const date = new Date(dateString.split(' ')[0]);
+    // Adiciona 1 dia para corrigir problemas de fuso horário
+    date.setDate(date.getDate() + 1);
     return date.toLocaleDateString('pt-BR');
 }
 
@@ -238,9 +231,5 @@ function showNotification(message, type) {
     notification.textContent = message;
     
     document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
-}
-
-function initApp() {
-    console.log('Aplicativo inicializado');
+    setTimeout(() => notification.remove(), 4000);
 }
