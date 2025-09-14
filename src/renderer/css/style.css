@@ -106,3 +106,96 @@ legend {
         grid-template-columns: 1fr;
     }
 }
+
+#btn-add-photo {
+  margin-bottom: 10px;
+}
+
+.photos-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-height: 80px;
+  background-color: #f9f9f9;
+}
+
+.photo-thumbnail {
+  position: relative;
+}
+
+.photo-thumbnail img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.remove-photo-btn {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: red;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  line-height: 18px;
+  text-align: center;
+}
+
+.quesitos-group {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.quesitos-group:last-child {
+  border-bottom: none;
+}
+
+.quesitos-group h4 {
+  margin-bottom: 10px;
+  color: var(--dark);
+}
+
+.quesito-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.quesito-item .number {
+  font-weight: bold;
+  padding-top: 8px;
+  min-width: 20px;
+}
+
+.quesito-item .fields {
+  flex-grow: 1;
+}
+
+.quesito-item textarea {
+  width: 100%;
+  min-height: 60px;
+  margin-bottom: 5px;
+}
+
+.quesito-item .remove-quesito-btn {
+  margin-top: 5px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background-color: #dc3545; /* Vermelho */
+}
+
+.btn-add-quesito {
+  font-size: 13px;
+}

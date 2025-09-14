@@ -121,10 +121,18 @@
                   <label for="imc">IMC (kg/m²):</label>
                   <input type="text" id="imc" name="imc" readonly />
               </div>
-              <div class="form-group">
-                  <label for="pressao_arterial">Pressão Arterial:</label>
-                  <input type="text" id="pressao_arterial" name="pressao_arterial" placeholder="ex: 120/80 mmHg"/>
+             <div class="form-group full-width">
+                <label>Fotos:</label>
+                <button type="button" id="btn-add-photo" class="btn-secondary">Adicionar Fotos</button>
+                <div id="photos-preview-container" class="photos-preview">
+                  </div>
               </div>
+
+              <div class="form-group full-width">
+                  <label for="exame_fisico_geral">Exame Físico (Otoscopia, Oroscopia, etc.):</label>
+                  <textarea id="exame_fisico_geral" name="exame_fisico_geral" rows="4"></textarea>
+              </div>
+
               <div class="form-group full-width">
                   <label for="exame_fisico_geral">Exame Físico (Otoscopia, Oroscopia, etc.):</label>
                   <textarea id="exame_fisico_geral" name="exame_fisico_geral" rows="4"></textarea>
@@ -173,20 +181,28 @@
       </fieldset>
       <fieldset>
         <legend>Respostas aos Quesitos</legend>
-        <div class="form-grid">
-          <div class="form-group full-width">
-              <label for="quesitos_juizo">Quesitos do Juízo:</label>
-              <textarea id="quesitos_juizo" name="quesitos_juizo" rows="6"></textarea>
-          </div>
-          <div class="form-group full-width">
-              <label for="quesitos_reclamante">Quesitos do Reclamante:</label>
-              <textarea id="quesitos_reclamante" name="quesitos_reclamante" rows="4"></textarea>
-          </div>
-           <div class="form-group full-width">
-              <label for="quesitos_reclamada">Quesitos da Reclamada:</label>
-              <textarea id="quesitos_reclamada" name="quesitos_reclamada" rows="4"></textarea>
-          </div>
+        
+        <div class="quesitos-group">
+          <h4>Quesitos do Juízo</h4>
+          <div id="quesitos-juizo-list" class="quesitos-list">
+            </div>
+          <button type="button" id="btn-add-quesito-juizo" class="btn-secondary btn-add-quesito">Adicionar Pergunta</button>
         </div>
+
+        <div class="quesitos-group">
+          <h4>Quesitos do Reclamante</h4>
+          <div id="quesitos-reclamante-list" class="quesitos-list">
+            </div>
+          <button type="button" id="btn-add-quesito-reclamante" class="btn-secondary btn-add-quesito">Adicionar Pergunta</button>
+        </div>
+
+        <div class="quesitos-group">
+          <h4>Quesitos da Reclamada</h4>
+          <div id="quesitos-reclamada-list" class="quesitos-list">
+            </div>
+          <button type="button" id="btn-add-quesito-reclamada" class="btn-secondary btn-add-quesito">Adicionar Pergunta</button>
+        </div>
+
       </fieldset>
     </div>
 

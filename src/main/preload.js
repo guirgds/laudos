@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     if (!id) throw new Error("ID do laudo não fornecido.");
     return ipcRenderer.invoke("delete-laudo", id);
   },
+  selectPhotos: () => ipcRenderer.invoke("select-photos"),
+  
   exportWord: async (laudoData) => {
     validateLaudo(laudoData);
     return ipcRenderer.invoke("export-word", laudoData);

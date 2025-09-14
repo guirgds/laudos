@@ -47,7 +47,7 @@ function initDatabase() {
               altura REAL,
               peso REAL,
               imc REAL,
-              pressao_arterial TEXT,
+              fotos_paths TEXT, /* Linha nova */
               exame_fisico_geral TEXT,
               exames_complementares TEXT,
               discussao TEXT,

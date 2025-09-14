@@ -1,5 +1,6 @@
 // main.js
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const fs = require('fs');
 const path = require('path');
 const db = require('../../database/db'); // Caminho CORRETO
 
@@ -113,4 +114,36 @@ ipcMain.handle('export-word', async (event, laudoData) => {
     console.error(error);
     return { success: false, error: error.message };
   }
+});
+
+// src/main/main.js
+
+ipcMain.handle('select-photos', async () => {
+  // Abre a janela para selecionar arquivos
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'png', 'gif', 'jpeg'] }]
+  });
+
+  if (result.canceled) {
+    return { success: false, error: 'Seleção cancelada' };
+  }
+
+  // Cria uma pasta para as imagens dentro dos dados do usuário, se não existir
+  const imagesDir = path.join(app.getPath('userData'), 'laudo_images');
+  if (!fs.existsSync(imagesDir)){
+      fs.mkdirSync(imagesDir);
+  }
+
+  const newPaths = [];
+  for (const oldPath of result.filePaths) {
+    const fileName = `${Date.now()}-${path.basename(oldPath)}`;
+    const newPath = path.join(imagesDir, fileName);
+
+    // Copia a imagem para a pasta do app
+    fs.copyFileSync(oldPath, newPath);
+    newPaths.push(newPath);
+  }
+
+  return { success: true, paths: newPaths };
 });
