@@ -26,11 +26,12 @@ function initDatabase() {
       } else {
         console.log('Conectado ao banco de dados SQLite.');
 
-        db.serialize(() => {
+         db.serialize(() => {
           db.run(`
             CREATE TABLE IF NOT EXISTS laudos (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               numero_processo TEXT NOT NULL,
+              vara_trabalho TEXT,
               cidade TEXT,
               reclamante TEXT NOT NULL,
               reclamada TEXT,
@@ -40,34 +41,27 @@ function initDatabase() {
               data_nascimento TEXT,
               cpf TEXT,
               naturalidade TEXT,
-              horario_trabalho TEXT,
-              empresa_atual TEXT,
-              funcao_atual TEXT,
               queixa_principal TEXT,
-              inicio_sintomas TEXT,
-              sintomas_detalhes TEXT,
-              zumbido TEXT,
-              antecedentes TEXT,
-              uso_protetor TEXT,
+              historia_molestia TEXT,
+              passado_laboral TEXT,
               altura REAL,
               peso REAL,
+              imc REAL,
               pressao_arterial TEXT,
-              otoscopia TEXT,
-              oroscopia TEXT,
-              orofaringe TEXT,
+              exame_fisico_geral TEXT,
+              exames_complementares TEXT,
+              discussao TEXT,
+              conclusao TEXT,
+              quesitos_juizo TEXT,
+              quesitos_reclamante TEXT,
+              quesitos_reclamada TEXT,
               data_pericia TEXT,
               hora_pericia TEXT,
-              diagnostico TEXT,
-              relacao_causal TEXT,
-              nexo_tecnico TEXT,
-              aptidao TEXT,
-              reducao_capacidade TEXT,
-              percentual_reducao INTEGER,
+              perito TEXT,
+              crm TEXT,
               valor_honorarios REAL,
               valor_por_extenso TEXT,
               data_laudo TEXT,
-              perito TEXT,
-              crm TEXT,
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
           `);

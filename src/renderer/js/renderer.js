@@ -15,8 +15,28 @@ const btnCancel = document.getElementById('btn-cancel');
 const laudoForm = document.getElementById('laudo-form');
 
 // Inicialização
+// renderer.js
 document.addEventListener('DOMContentLoaded', () => {
+    // Mantém a chamada original para carregar os laudos ao iniciar
     loadLaudos();
+
+    // Adiciona a lógica para ativar as máscaras
+    const cpfInput = document.getElementById('cpf');
+    const valorHonorariosInput = document.getElementById('valor_honorarios');
+
+    if (cpfInput) {
+        cpfInput.addEventListener('input', (e) => {
+            // A função maskCPF vem do arquivo masks.js que criamos
+            e.target.value = maskCPF(e.target.value);
+        });
+    }
+
+    if (valorHonorariosInput) {
+        valorHonorariosInput.addEventListener('input', (e) => {
+            // A função maskCurrency vem do arquivo masks.js
+            e.target.value = maskCurrency(e.target.value);
+        });
+    }
 });
 
 // Event listeners

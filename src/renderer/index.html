@@ -26,130 +26,217 @@
       </div>
 
       <!-- Tela de Formulário Completo -->
-      <div id="form-view" class="view-container" style="display: none;">
-        <h2>Laudo Médico</h2>
-        <form id="laudo-form">
+    <div id="form-view" class="view-container" style="display: none;">
+  <h2>Laudo Médico Pericial</h2>
+  
+  <div class="tab-nav">
+    <button class="tab-link active" onclick="openTab(event, 'tab-processo')">Processo</button>
+    <button class="tab-link" onclick="openTab(event, 'tab-paciente')">Reclamante</button>
+    <button class="tab-link" onclick="openTab(event, 'tab-anamnese')">Anamnese</button>
+    <button class="tab-link" onclick="openTab(event, 'tab-conclusao')">Discussão/Conclusão</button>
+    <button class="tab-link" onclick="openTab(event, 'tab-finalizacao')">Finalização</button>
+  </div>
 
-          <label for="numero_processo">Número do Processo:</label>
-          <input type="text" id="numero_processo" name="numero_processo" required />
-
-          <label for="cidade">Cidade:</label>
-          <input type="text" id="cidade" name="cidade" />
-
-          <label for="reclamante">Reclamante:</label>
-          <input type="text" id="reclamante" name="reclamante" required />
-
-          <label for="reclamada">Reclamada:</label>
-          <input type="text" id="reclamada" name="reclamada" />
-
-          <label for="data_admissao">Data de Admissão:</label>
-          <input type="date" id="data_admissao" name="data_admissao" />
-
-          <label for="data_demissao">Data de Demissão:</label>
-          <input type="date" id="data_demissao" name="data_demissao" />
-
-          <label for="funcao_reclamante">Função do Reclamante:</label>
-          <input type="text" id="funcao_reclamante" name="funcao_reclamante" />
-
-          <label for="data_nascimento">Data de Nascimento:</label>
-          <input type="date" id="data_nascimento" name="data_nascimento" />
-
-          <label for="cpf">CPF:</label>
-          <input type="text" id="cpf" name="cpf" />
-
-          <label for="naturalidade">Naturalidade:</label>
-          <input type="text" id="naturalidade" name="naturalidade" />
-
-          <label for="horario_trabalho">Horário de Trabalho:</label>
-          <input type="text" id="horario_trabalho" name="horario_trabalho" />
-
-          <label for="empresa_atual">Empresa Atual:</label>
-          <input type="text" id="empresa_atual" name="empresa_atual" />
-
-          <label for="funcao_atual">Função Atual:</label>
-          <input type="text" id="funcao_atual" name="funcao_atual" />
-
-          <label for="queixa_principal">Queixa Principal:</label>
-          <textarea id="queixa_principal" name="queixa_principal" rows="2"></textarea>
-
-          <label for="inicio_sintomas">Início dos Sintomas:</label>
-          <input type="text" id="inicio_sintomas" name="inicio_sintomas" />
-
-          <label for="sintomas_detalhes">Detalhes dos Sintomas:</label>
-          <textarea id="sintomas_detalhes" name="sintomas_detalhes" rows="2"></textarea>
-
-          <label for="zumbido">Zumbido:</label>
-          <input type="text" id="zumbido" name="zumbido" />
-
-          <label for="antecedentes">Antecedentes:</label>
-          <textarea id="antecedentes" name="antecedentes" rows="2"></textarea>
-
-          <label for="uso_protetor">Uso de Protetor:</label>
-          <input type="text" id="uso_protetor" name="uso_protetor" />
-
-          <label for="altura">Altura (m):</label>
-          <input type="number" step="0.01" id="altura" name="altura" />
-
-          <label for="peso">Peso (kg):</label>
-          <input type="number" step="0.1" id="peso" name="peso" />
-
-          <label for="pressao_arterial">Pressão Arterial:</label>
-          <input type="text" id="pressao_arterial" name="pressao_arterial" />
-
-          <label for="otoscopia">Otoscopia:</label>
-          <input type="text" id="otoscopia" name="otoscopia" />
-
-          <label for="oroscopia">Oroscopia:</label>
-          <input type="text" id="oroscopia" name="oroscopia" />
-
-          <label for="orofaringe">Orofaringe:</label>
-          <input type="text" id="orofaringe" name="orofaringe" />
-
-          <label for="data_pericia">Data da Perícia:</label>
-          <input type="date" id="data_pericia" name="data_pericia" />
-
-          <label for="hora_pericia">Hora da Perícia:</label>
-          <input type="time" id="hora_pericia" name="hora_pericia" />
-
-          <label for="diagnostico">Diagnóstico:</label>
-          <textarea id="diagnostico" name="diagnostico" rows="2"></textarea>
-
-          <label for="relacao_causal">Relação Causal:</label>
-          <input type="text" id="relacao_causal" name="relacao_causal" />
-
-          <label for="nexo_tecnico">Nexo Técnico:</label>
-          <input type="text" id="nexo_tecnico" name="nexo_tecnico" />
-
-          <label for="aptidao">Aptidão:</label>
-          <input type="text" id="aptidao" name="aptidao" />
-
-          <label for="reducao_capacidade">Redução de Capacidade:</label>
-          <input type="text" id="reducao_capacidade" name="reducao_capacidade" />
-
-          <label for="percentual_reducao">Percentual de Redução (%):</label>
-          <input type="number" id="percentual_reducao" name="percentual_reducao" />
-
-          <label for="valor_honorarios">Valor de Honorários (R$):</label>
-          <input type="number" step="0.01" id="valor_honorarios" name="valor_honorarios" />
-
-          <label for="valor_por_extenso">Valor por Extenso:</label>
-          <input type="text" id="valor_por_extenso" name="valor_por_extenso" />
-
-          <label for="data_laudo">Data do Laudo:</label>
-          <input type="date" id="data_laudo" name="data_laudo" />
-
-          <label for="perito">Perito:</label>
-          <input type="text" id="perito" name="perito" />
-
-          <label for="crm">CRM:</label>
-          <input type="text" id="crm" name="crm" />
-
-          <div class="form-actions">
-            <button type="submit" class="btn-primary">Salvar</button>
-            <button type="button" id="btn-cancel" class="btn-secondary">Cancelar</button>
+  <form id="laudo-form">
+    <div id="tab-processo" class="tab-content active">
+      <fieldset>
+        <legend>Dados do Processo</legend>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="numero_processo">Número do Processo:</label>
+            <input type="text" id="numero_processo" name="numero_processo" required />
           </div>
-        </form>
-      </div>
+          <div class="form-group">
+            <label for="vara_trabalho">Vara do Trabalho:</label>
+            <input type="text" id="vara_trabalho" name="vara_trabalho" placeholder="Ex: 3ª Vara do Trabalho"/>
+          </div>
+          <div class="form-group full-width">
+            <label for="cidade">Cidade da Vara:</label>
+            <input type="text" id="cidade" name="cidade" placeholder="Ex: Porto Alegre - RS"/>
+          </div>
+           <div class="form-group">
+            <label for="reclamante">Reclamante:</label>
+            <input type="text" id="reclamante" name="reclamante" required />
+          </div>
+          <div class="form-group">
+            <label for="reclamada">Reclamada:</label>
+            <input type="text" id="reclamada" name="reclamada" />
+          </div>
+        </div>
+      </fieldset>
+    </div>
+
+    <div id="tab-paciente" class="tab-content">
+      <fieldset>
+        <legend>Dados Pessoais</legend>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="data_nascimento">Data de Nascimento:</label>
+            <input type="date" id="data_nascimento" name="data_nascimento" />
+          </div>
+          <div class="form-group">
+            <label for="idade">Idade:</label>
+            <input type="text" id="idade" name="idade" readonly />
+          </div>
+          <div class="form-group">
+            <label for="cpf">CPF:</label>
+            <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" />
+          </div>
+          <div class="form-group">
+            <label for="naturalidade">Naturalidade:</label>
+            <input type="text" id="naturalidade" name="naturalidade" placeholder="Ex: Cachoeirinha/RS"/>
+          </div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Dados Laborais na Reclamada</legend>
+         <div class="form-grid">
+          <div class="form-group">
+            <label for="funcao_reclamante">Função na Reclamada:</label>
+            <input type="text" id="funcao_reclamante" name="funcao_reclamante" />
+          </div>
+           <div class="form-group"></div>
+          <div class="form-group">
+            <label for="data_admissao">Data de Admissão:</label>
+            <input type="date" id="data_admissao" name="data_admissao" />
+          </div>
+          <div class="form-group">
+            <label for="data_demissao">Data de Demissão:</label>
+            <input type="date" id="data_demissao" name="data_demissao" />
+          </div>
+        </div>
+      </fieldset>
+       <fieldset>
+          <legend>Exame Físico</legend>
+          <div class="form-grid">
+              <div class="form-group">
+                  <label for="altura">Altura (m):</label>
+                  <input type="number" step="0.01" id="altura" name="altura" placeholder="ex: 1.75"/>
+              </div>
+              <div class="form-group">
+                  <label for="peso">Peso (kg):</label>
+                  <input type="number" step="0.1" id="peso" name="peso" placeholder="ex: 70.5"/>
+              </div>
+               <div class="form-group">
+                  <label for="imc">IMC (kg/m²):</label>
+                  <input type="text" id="imc" name="imc" readonly />
+              </div>
+              <div class="form-group">
+                  <label for="pressao_arterial">Pressão Arterial:</label>
+                  <input type="text" id="pressao_arterial" name="pressao_arterial" placeholder="ex: 120/80 mmHg"/>
+              </div>
+              <div class="form-group full-width">
+                  <label for="exame_fisico_geral">Exame Físico (Otoscopia, Oroscopia, etc.):</label>
+                  <textarea id="exame_fisico_geral" name="exame_fisico_geral" rows="4"></textarea>
+              </div>
+          </div>
+      </fieldset>
+    </div>
+    
+    <div id="tab-anamnese" class="tab-content">
+       <fieldset>
+        <legend>Anamnese e Histórico</legend>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="queixa_principal">Queixa Principal:</label>
+            <textarea id="queixa_principal" name="queixa_principal" rows="3"></textarea>
+          </div>
+          <div class="form-group full-width">
+              <label for="historia_molestia">História Pregressa da Moléstia:</label>
+              <textarea id="historia_molestia" name="historia_molestia" rows="8"></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label for="passado_laboral">Passado Laboral (CTPS):</label>
+            <textarea id="passado_laboral" name="passado_laboral" rows="6"></textarea>
+          </div>
+        </div>
+      </fieldset>
+    </div>
+
+    <div id="tab-conclusao" class="tab-content">
+      <fieldset>
+        <legend>Análise Técnica</legend>
+        <div class="form-grid">
+            <div class="form-group full-width">
+                <label for="exames_complementares">Exames Complementares:</label>
+                <textarea id="exames_complementares" name="exames_complementares" rows="5"></textarea>
+            </div>
+            <div class="form-group full-width">
+                <label for="discussao">Considerações Médicas / Discussão:</label>
+                <textarea id="discussao" name="discussao" rows="8"></textarea>
+            </div>
+            <div class="form-group full-width">
+                <label for="conclusao">Conclusão:</label>
+                <textarea id="conclusao" name="conclusao" rows="5"></textarea>
+            </div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Respostas aos Quesitos</legend>
+        <div class="form-grid">
+          <div class="form-group full-width">
+              <label for="quesitos_juizo">Quesitos do Juízo:</label>
+              <textarea id="quesitos_juizo" name="quesitos_juizo" rows="6"></textarea>
+          </div>
+          <div class="form-group full-width">
+              <label for="quesitos_reclamante">Quesitos do Reclamante:</label>
+              <textarea id="quesitos_reclamante" name="quesitos_reclamante" rows="4"></textarea>
+          </div>
+           <div class="form-group full-width">
+              <label for="quesitos_reclamada">Quesitos da Reclamada:</label>
+              <textarea id="quesitos_reclamada" name="quesitos_reclamada" rows="4"></textarea>
+          </div>
+        </div>
+      </fieldset>
+    </div>
+
+    <div id="tab-finalizacao" class="tab-content">
+      <fieldset>
+          <legend>Dados do Perito e Honorários</legend>
+          <div class="form-grid">
+              <div class="form-group">
+                  <label for="perito">Perito:</label>
+                  <input type="text" id="perito" name="perito" />
+              </div>
+              <div class="form-group">
+                  <label for="crm">CRM:</label>
+                  <input type="text" id="crm" name="crm" />
+              </div>
+              <div class="form-group">
+                  <label for="valor_honorarios">Valor de Honorários (R$):</label>
+                  <input type="text" id="valor_honorarios" name="valor_honorarios" placeholder="R$ 0,00" />
+              </div>
+               <div class="form-group">
+                  <label for="valor_por_extenso">Valor por Extenso:</label>
+                  <input type="text" id="valor_por_extenso" name="valor_por_extenso" />
+              </div>
+          </div>
+      </fieldset>
+       <fieldset>
+        <legend>Datas</legend>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="data_pericia">Data da Perícia:</label>
+            <input type="date" id="data_pericia" name="data_pericia" />
+          </div>
+           <div class="form-group">
+            <label for="hora_pericia">Hora da Perícia:</label>
+            <input type="time" id="hora_pericia" name="hora_pericia" />
+          </div>
+           <div class="form-group">
+            <label for="data_laudo">Data do Laudo:</label>
+            <input type="date" id="data_laudo" name="data_laudo" />
+          </div>
+        </div>
+      </fieldset>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Salvar</button>
+      <button type="button" id="btn-cancel" class="btn-secondary">Cancelar</button>
+    </div>
+  </form>
+</div>
 
       <!-- Tela de Carregamento -->
       <div id="loading-view" class="view-container" style="display: none;">
@@ -175,6 +262,7 @@
       });
     });
   </script>
+  <script src="js/masks.js"></script> <script src="js/renderer.js"></script>
   <script src="js/renderer.js"></script>
 </body>
 </html>
