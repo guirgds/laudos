@@ -47,14 +47,13 @@ function initDatabase() {
               altura REAL,
               peso REAL,
               imc REAL,
-              fotos_paths TEXT, /* Linha nova */
+              fotos_paths TEXT,
               exame_fisico_geral TEXT,
               exames_complementares TEXT,
               discussao TEXT,
               conclusao TEXT,
               quesitos_juizo TEXT,
-              quesitos_reclamante TEXT,
-              quesitos_reclamada TEXT,
+              /* quesitos_reclamante e quesitos_reclamada foram removidos */
               data_pericia TEXT,
               hora_pericia TEXT,
               perito TEXT,

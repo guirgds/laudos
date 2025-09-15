@@ -1,201 +1,122 @@
-/* Formulário de Laudo */
-#laudo-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* style.css - TEMA PROFISSIONAL ESCURO */
+
+/* 1. DEFINIÇÃO DA NOVA PALETA DE CORES */
+:root {
+  /* Cor primária (detalhes, botões, abas ativas) */
+  --bs-primary: #20c997; /* Verde-azulado (Teal) */
+  --bs-primary-rgb: 32, 201, 151;
+
+  /* Cores de fundo */
+  --bs-body-bg: #212529;         /* Fundo principal (quase preto) */
+  --bs-body-color: #dee2e6;       /* Cor do texto principal (cinza claro) */
+  --card-bg: #343a40;             /* Fundo dos cards e formulários (cinza escuro) */
+  --border-color: #495057;        /* Cor das bordas */
 }
 
-#laudo-form label {
-    font-weight: 600;
-    margin-bottom: 4px;
-    color: var(--dark);
+/* 2. APLICAÇÃO GERAL DO TEMA */
+body {
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
 }
 
-#laudo-form input,
-#laudo-form textarea,
-#laudo-form select {
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 14px;
-    width: 100%;
-    transition: border-color 0.3s;
+/* Ajusta a cor dos títulos para branco */
+h1, h2, h4, h5, .h4 {
+    color: #fff;
 }
 
-#laudo-form input:focus,
-#laudo-form textarea:focus,
-#laudo-form select:focus {
-    border-color: var(--secondary);
-    outline: none;
+/* 3. AJUSTES ESPECÍFICOS DOS COMPONENTES */
+
+/* Cabeçalho */
+.app-header {
+  background-color: #1c1f23; /* Um tom um pouco diferente para destacar */
+  border-bottom: 1px solid var(--border-color) !important;
 }
 
-#laudo-form textarea {
-    resize: vertical;
+/* Rodapé */
+.app-footer {
+  background-color: #1c1f23;
+  border-top: 1px solid var(--border-color) !important;
 }
 
-.form-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
+/* Abas */
+.nav-tabs {
+  border-bottom-color: var(--border-color);
+}
+.nav-tabs .nav-link {
+  color: var(--bs-body-color);
+  border-color: transparent;
+}
+.nav-tabs .nav-link.active {
+  color: var(--bs-primary);
+  background-color: transparent;
+  border-bottom-color: var(--bs-primary);
+}
+.nav-tabs .nav-link:hover {
+  border-color: var(--border-color);
 }
 
-/* Responsividade */
-@media (max-width: 768px) {
-    .laudos-list {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    }
-
-    .app-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .header-actions {
-        width: 100%;
-        justify-content: flex-start;
-    }
+/* Cards e Formulários */
+.card {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+}
+.form-control, .form-select {
+  background-color: #495057;
+  color: var(--bs-body-color);
+  border-color: #6c757d;
+}
+.form-control:focus {
+  background-color: #495057;
+  color: var(--bs-body-color);
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+.form-control::placeholder {
+  color: #adb5bd;
+}
+input[readonly] {
+  background-color: #212529 !important;
 }
 
-@media (max-width: 480px) {
-    #laudo-form {
-        padding: 15px;
-    }
-
-    .laudo-card {
-        padding: 12px;
-    }
-
-    button {
-        font-size: 13px;
-        padding: 8px 12px;
-    }
+/* Botões */
+.btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
 }
 
-/* style.css */
-fieldset {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 20px;
+/* Notificação */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    border-radius: 5px;
+    color: white;
+    z-index: 1050;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
+.notification.success { background-color: #198754; }
+.notification.error { background-color: #dc3545; }
 
-legend {
-    padding: 0 8px;
-    font-weight: 700;
-    color: var(--primary);
-}
 
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-}
-
-.form-group.full-width {
-    grid-column: 1 / -1;
-}
-
-/* Ajustes para telas menores */
-@media (max-width: 768px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-#btn-add-photo {
-  margin-bottom: 10px;
-}
-
-.photos-preview {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 10px;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  min-height: 80px;
-  background-color: #f9f9f9;
-}
-
-.photo-thumbnail {
-  position: relative;
-}
-
-.photo-thumbnail img {
-  width: 100px;
-  height: 100px;
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-}
-
+/* --- ESTILOS DOS COMPONENTES CUSTOMIZADOS (FOTOS, QUESITOS) --- */
+.photos-preview { background-color: var(--bs-body-bg) !important; }
+.photos-preview img { border: 1px solid var(--border-color); }
 .remove-photo-btn {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background-color: red;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  font-weight: bold;
-  line-height: 18px;
-  text-align: center;
+  background-color: #dc3545; color: white; border: none;
+  position: absolute; top: -5px; right: -5px; width: 20px;
+  height: 20px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: 14px;
+  line-height: 1; cursor: pointer;
 }
-
-.quesitos-group {
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
-}
-
-.quesitos-group:last-child {
-  border-bottom: none;
-}
-
-.quesitos-group h4 {
-  margin-bottom: 10px;
-  color: var(--dark);
-}
+.photo-thumbnail { position: relative; }
 
 .quesito-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 15px;
+  border-color: var(--border-color) !important;
+  display: flex; gap: 15px; padding: 15px;
+  border-radius: 0.375rem; margin-bottom: 1rem; align-items: flex-start;
 }
-
-.quesito-item .number {
-  font-weight: bold;
-  padding-top: 8px;
-  min-width: 20px;
-}
-
-.quesito-item .fields {
-  flex-grow: 1;
-}
-
-.quesito-item textarea {
-  width: 100%;
-  min-height: 60px;
-  margin-bottom: 5px;
-}
-
-.quesito-item .remove-quesito-btn {
-  margin-top: 5px;
-  padding: 4px 8px;
-  font-size: 12px;
-  background-color: #dc3545; /* Vermelho */
-}
-
-.btn-add-quesito {
-  font-size: 13px;
-}
+.quesito-item .number { font-weight: bold; padding-top: 0.5rem; }
+.quesito-item .fields { flex-grow: 1; }
+.quesito-item .remove-quesito-btn { flex-shrink: 0; }

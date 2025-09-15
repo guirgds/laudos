@@ -1,3 +1,5 @@
+// renderer.js - VERSÃO COM QUESITOS SIMPLIFICADOS
+
 // Variáveis globais
 let currentView = 'list';
 let editingId = null;
@@ -13,21 +15,30 @@ const btnList = document.getElementById('btn-list');
 const btnCancel = document.getElementById('btn-cancel');
 const laudoForm = document.getElementById('laudo-form');
 
-// --- LÓGICA DAS ABAS ---
-function openTab(evt, tabName) {
-  const tabcontent = document.getElementsByClassName("tab-content");
-  for (let i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
-  const tablinks = document.getElementsByClassName("tab-link");
-  for (let i = 0; i < tablinks.length; i++) tablinks[i].className = tablinks[i].className.replace(" active", "");
-  document.getElementById(tabName).style.display = "block";
-  evt.currentTarget.className += " active";
+// --- FUNÇÃO PARA INICIALIZAR A UI DOS QUESITOS (SIMPLIFICADA) ---
+function setupQuesitosUI() {
+    const container = document.getElementById('quesitos-group-container');
+    if (!container) return;
+
+    const quesitoTemplate = (type, title) => `
+        <div class="mb-3">
+            <h5>${title}</h5>
+            <div id="quesitos-${type}-list" class="quesitos-list"></div>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-type="${type}">Adicionar Pergunta</button>
+        </div>
+    `;
+    
+    // REMOVIDO: As linhas para 'reclamante' e 'reclamada' foram apagadas.
+    container.innerHTML = quesitoTemplate('juizo', 'Quesitos do Juízo');
 }
 
 // --- INICIALIZAÇÃO E EVENTOS PRINCIPAIS ---
 document.addEventListener('DOMContentLoaded', () => {
+    const yearSpan = document.getElementById('year');
+    if (yearSpan) yearSpan.textContent = new Date().getFullYear();
+    
     loadLaudos();
 
-    // --- Seleciona elementos ---
     const inputs = {
         processo: document.getElementById('numero_processo'),
         cpf: document.getElementById('cpf'),
@@ -39,20 +50,14 @@ document.addEventListener('DOMContentLoaded', () => {
         imc: document.getElementById('imc'),
         btnAddPhoto: document.getElementById('btn-add-photo'),
         photosPreviewContainer: document.getElementById('photos-preview-container'),
-        btnAddQuesitoJuizo: document.getElementById('btn-add-quesito-juizo'),
-        quesitosJuizoList: document.getElementById('quesitos-juizo-list'),
-        btnAddQuesitoReclamante: document.getElementById('btn-add-quesito-reclamante'),
-        quesitosReclamanteList: document.getElementById('quesitos-reclamante-list'),
-        btnAddQuesitoReclamada: document.getElementById('btn-add-quesito-reclamada'),
-        quesitosReclamadaList: document.getElementById('quesitos-reclamada-list'),
+        quesitosContainer: document.getElementById('quesitos-group-container')
     };
 
-    // --- Lógica de Cálculos e Máscaras ---
+    // Cálculos e Máscaras
     const calcularIMC = () => inputs.imc.value = (parseFloat(inputs.peso.value) > 0 && parseFloat(inputs.altura.value) > 0) ? (parseFloat(inputs.peso.value) / (parseFloat(inputs.altura.value) ** 2)).toFixed(2) : '';
     const calcularIdade = () => {
         if (!inputs.dataNascimento.value) { inputs.idade.value = ''; return; }
-        const hoje = new Date();
-        const nascimento = new Date(inputs.dataNascimento.value);
+        const hoje = new Date(); const nascimento = new Date(inputs.dataNascimento.value);
         let idade = hoje.getFullYear() - nascimento.getFullYear();
         const m = hoje.getMonth() - nascimento.getMonth();
         if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
@@ -65,89 +70,56 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputs.peso) inputs.peso.addEventListener('input', calcularIMC);
     if (inputs.altura) inputs.altura.addEventListener('input', calcularIMC);
 
-    // --- Lógica de Fotos ---
-    const renderPhotos = () => {
-        inputs.photosPreviewContainer.innerHTML = currentPhotoPaths.map((path, index) => `
-            <div class="photo-thumbnail">
-                <img src="${path.replaceAll('\\', '/')}" alt="Foto ${index + 1}" />
-                <button type="button" class="remove-photo-btn" data-index="${index}">&times;</button>
-            </div>`).join('');
-    };
+    // Fotos
+    const renderPhotos = () => { inputs.photosPreviewContainer.innerHTML = currentPhotoPaths.map((path, index) => `<div class="photo-thumbnail"><img src="${path.replaceAll('\\', '/')}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`).join(''); };
     if (inputs.btnAddPhoto) inputs.btnAddPhoto.addEventListener('click', async () => {
         const result = await window.electronAPI.selectPhotos();
         if (result.success) { currentPhotoPaths.push(...result.paths); renderPhotos(); }
     });
     if (inputs.photosPreviewContainer) inputs.photosPreviewContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('remove-photo-btn')) {
-            currentPhotoPaths.splice(parseInt(e.target.dataset.index, 10), 1);
-            renderPhotos();
-        }
+        if (e.target.classList.contains('remove-photo-btn')) { currentPhotoPaths.splice(parseInt(e.target.dataset.index, 10), 1); renderPhotos(); }
     });
-
-    // --- LÓGICA DOS QUESITOS DINÂMICOS ---
-    const renderQuesitos = (container, quesitos) => {
-        container.innerHTML = quesitos.map((q, index) => `
-            <div class="quesito-item" data-index="${index}">
-                <span class="number">${index + 1}.</span>
-                <div class="fields">
-                    <textarea class="quesito-pergunta" placeholder="Digite a pergunta">${q.pergunta}</textarea>
-                    <textarea class="quesito-resposta" placeholder="Digite a resposta">${q.resposta}</textarea>
-                    <button type="button" class="remove-quesito-btn btn-danger">Remover</button>
-                </div>
-            </div>
-        `).join('');
-    };
-
-    const setupQuesitosGroup = (addButton, container) => {
-        addButton.addEventListener('click', () => {
-            const quesitos = getQuesitosFromDOM(container);
-            quesitos.push({ pergunta: '', resposta: '' });
-            renderQuesitos(container, quesitos);
-        });
-
-        container.addEventListener('click', (e) => {
+    
+    // Quesitos
+    if (inputs.quesitosContainer) {
+        inputs.quesitosContainer.addEventListener('click', e => {
+            const type = e.target.dataset.type;
+            if (type) {
+                const list = document.getElementById(`quesitos-${type}-list`);
+                const quesitos = getQuesitosFromDOM(list);
+                quesitos.push({ pergunta: '', resposta: '' });
+                renderQuesitos(list, quesitos);
+            }
             if (e.target.classList.contains('remove-quesito-btn')) {
-                const indexToRemove = parseInt(e.target.closest('.quesito-item').dataset.index, 10);
-                const quesitos = getQuesitosFromDOM(container);
-                quesitos.splice(indexToRemove, 1);
-                renderQuesitos(container, quesitos);
+                const item = e.target.closest('.quesito-item');
+                const list = item.parentElement;
+                const index = parseInt(item.dataset.index, 10);
+                const quesitos = getQuesitosFromDOM(list);
+                quesitos.splice(index, 1);
+                renderQuesitos(list, quesitos);
             }
         });
-    };
-    
-    setupQuesitosGroup(inputs.btnAddQuesitoJuizo, inputs.quesitosJuizoList);
-    setupQuesitosGroup(inputs.btnAddQuesitoReclamante, inputs.quesitosReclamanteList);
-    setupQuesitosGroup(inputs.btnAddQuesitoReclamada, inputs.quesitosReclamadaList);
-
-    document.getElementById('tab-processo').style.display = 'block';
+    }
 });
 
-// --- Eventos de Botões Principais ---
+// Botões Principais
 btnNew.addEventListener('click', () => showFormView());
 btnList.addEventListener('click', loadLaudos);
-btnCancel.addEventListener('click', () => { editingId = null; resetForm(); showListView(); });
+btnCancel.addEventListener('click', () => { editingId = null; showListView(); });
 laudoForm.addEventListener('submit', async (e) => { e.preventDefault(); await saveOrUpdateLaudo(); });
 
-// --- Funções de Navegação ---
-function showFormView(id = null) { editingId = id; listView.style.display = 'none'; formView.style.display = 'block'; loadingView.style.display = 'none'; if (id) { loadLaudoForEditing(id); } else { resetForm(); } }
-function showListView() { listView.style.display = 'block'; formView.style.display = 'none'; loadingView.style.display = 'none'; }
-function showLoading() { listView.style.display = 'none'; formView.style.display = 'none'; loadingView.style.display = 'flex'; }
+// Funções de Navegação
+function showFormView(id = null) { editingId = id; listView.style.display = 'none'; formView.style.display = 'block'; loadingView.classList.add('d-none'); if (id) { loadLaudoForEditing(id); } else { resetForm(); } }
+function showListView() { listView.style.display = 'block'; formView.style.display = 'none'; loadingView.classList.add('d-none'); resetForm(); }
+function showLoading() { listView.style.display = 'none'; formView.style.display = 'none'; loadingView.classList.remove('d-none'); loadingView.classList.add('d-flex'); }
 
-// --- Funções de Manipulação de Dados (CRUD) ---
-async function loadLaudos() { showLoading(); try { const result = await window.electronAPI.loadLaudos(); if (result.success) renderLaudosList(result.data); else showNotification('Erro ao carregar laudos: ' + result.error, 'error'); } catch (error) { showNotification('Erro ao carregar laudos: ' + error.message, 'error'); } showListView(); }
-async function loadLaudoForEditing(id) { showLoading(); try { const result = await window.electronAPI.getLaudo(id); if (result.success) { populateForm(result.data); formView.style.display = 'block'; loadingView.style.display = 'none'; } else { showNotification('Erro ao carregar laudo: ' + result.error, 'error'); showListView(); } } catch (error) { showNotification('Erro ao carregar laudo: ' + error.message, 'error'); showListView(); } }
-async function deleteLaudo(id) { if (confirm('Tem certeza?')) { showLoading(); try { const result = await window.electronAPI.deleteLaudo(id); if (result.success) { showNotification('Laudo excluído!', 'success'); loadLaudos(); } else { showNotification('Erro ao excluir: ' + result.error, 'error'); showListView(); } } catch (error) { showNotification('Erro ao excluir: ' + error.message, 'error'); showListView(); } } }
+// Funções CRUD
+async function loadLaudos() { showLoading(); try { const result = await window.electronAPI.loadLaudos(); if (result.success) renderLaudosList(result.data); else showNotification('Erro ao carregar: ' + result.error, 'error'); } catch (error) { showNotification('Erro ao carregar: ' + error.message, 'error'); } showListView(); }
+async function loadLaudoForEditing(id) { showLoading(); try { const result = await window.electronAPI.getLaudo(id); if (result.success) { populateForm(result.data); formView.style.display = 'block'; loadingView.classList.add('d-none'); } else { showNotification('Erro ao carregar laudo: ' + result.error, 'error'); showListView(); } } catch (error) { showNotification('Erro ao carregar laudo: ' + error.message, 'error'); showListView(); } }
+async function deleteLaudo(id) { if (confirm('Tem certeza?')) { showLoading(); try { const result = await window.electronAPI.deleteLaudo(id); if (result.success) { showNotification('Laudo excluído!', 'success'); loadLaudos(); } else { showNotification('Erro ao excluir: ' + result.error, 'error'); } } catch (error) { showNotification('Erro ao excluir: ' + error.message, 'error'); } } }
 async function exportToWord(id) { /* Lógica de exportação futura */ }
 
-function getQuesitosFromDOM(container) {
-    const items = [];
-    container.querySelectorAll('.quesito-item').forEach(item => {
-        const pergunta = item.querySelector('.quesito-pergunta').value;
-        const resposta = item.querySelector('.quesito-resposta').value;
-        items.push({ pergunta, resposta });
-    });
-    return items;
-}
+const getQuesitosFromDOM = (container) => Array.from(container.querySelectorAll('.quesito-item')).map(item => ({ pergunta: item.querySelector('.quesito-pergunta').value, resposta: item.querySelector('.quesito-resposta').value }));
 
 async function saveOrUpdateLaudo() {
     const formDataObj = new FormData(laudoForm);
@@ -157,20 +129,21 @@ async function saveOrUpdateLaudo() {
 
     formData.fotos_paths = JSON.stringify(currentPhotoPaths);
     formData.quesitos_juizo = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-juizo-list')));
-    formData.quesitos_reclamante = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-reclamante-list')));
-    formData.quesitos_reclamada = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-reclamada-list')));
+    // REMOVIDO: As linhas para 'reclamante' e 'reclamada' foram apagadas.
     
     showLoading();
     try {
         if (editingId) formData.id = editingId;
         const result = await window.electronAPI.saveLaudo(formData);
-        if (result.success) { showNotification('Laudo salvo!', 'success'); editingId = null; resetForm(); loadLaudos(); } 
+        if (result.success) { showNotification('Laudo salvo!', 'success'); editingId = null; loadLaudos(); } 
         else { showNotification('Erro ao salvar: ' + result.error, 'error'); showFormView(editingId); }
     } catch (error) { showNotification('Erro ao salvar: ' + error.message, 'error'); showFormView(editingId); }
 }
 
-// --- Funções de Renderização e Utilidades ---
-function renderLaudosList(laudos) { if (!laudos || laudos.length === 0) { laudosList.innerHTML = '<p class="no-data">Nenhum laudo cadastrado.</p>'; return; } laudosList.innerHTML = laudos.map(laudo => `<div class="laudo-card"><h3>Processo: ${laudo.numero_processo || 'N/A'}</h3><div class="laudo-details"><p><strong>Reclamante:</strong> ${laudo.reclamante || 'N/A'}</p><p><strong>Data:</strong> ${formatDate(laudo.data_laudo)}</p></div><div class="laudo-actions"><button class="btn-primary" onclick="showFormView(${laudo.id})">Editar</button><button class="btn-success" onclick="exportToWord(${laudo.id})">Exportar</button><button class="btn-danger" onclick="deleteLaudo(${laudo.id})">Excluir</button></div></div>`).join(''); }
+// Funções de Renderização e Utilidades
+function renderLaudosList(laudos) { if (!laudos || laudos.length === 0) { laudosList.innerHTML = '<p class="text-muted">Nenhum laudo cadastrado.</p>'; return; } laudosList.innerHTML = laudos.map(laudo => `<div class="col-lg-4 col-md-6"><div class="card h-100"><div class="card-body"><h5 class="card-title">${laudo.numero_processo || 'N/A'}</h5><p class="card-text"><strong>Reclamante:</strong> ${laudo.reclamante || 'N/A'}</p><p class="card-text"><small class="text-muted">Data: ${formatDate(laudo.data_laudo)}</small></p></div><div class="card-footer bg-transparent border-top-0 text-end"><button class="btn btn-sm btn-outline-primary" onclick="showFormView(${laudo.id})">Editar</button><button class="btn btn-sm btn-outline-success" onclick="exportToWord(${laudo.id})">Exportar</button><button class="btn btn-sm btn-outline-danger" onclick="deleteLaudo(${laudo.id})">Excluir</button></div></div></div>`).join(''); }
+
+const renderQuesitos = (container, quesitos) => { container.innerHTML = quesitos.map((q, index) => `<div class="quesito-item" data-index="${index}"><span class="number">${index + 1}.</span><div class="fields flex-grow-1"><textarea class="form-control mb-2 quesito-pergunta" rows="2" placeholder="Digite a pergunta">${q.pergunta}</textarea><textarea class="form-control quesito-resposta" rows="3" placeholder="Digite a resposta">${q.resposta}</textarea></div><button type="button" class="btn btn-danger btn-sm remove-quesito-btn align-self-start">&times;</button></div>`).join(''); };
 
 function populateForm(data) {
     resetForm();
@@ -186,34 +159,16 @@ function populateForm(data) {
     document.getElementById('photos-preview-container').innerHTML = currentPhotoPaths.map((path, index) => `<div class="photo-thumbnail"><img src="${path.replaceAll('\\', '/')}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`).join('');
     
     const quesitosJuizo = data.quesitos_juizo ? JSON.parse(data.quesitos_juizo) : [];
-    const quesitosReclamante = data.quesitos_reclamante ? JSON.parse(data.quesitos_reclamante) : [];
-    const quesitosReclamada = data.quesitos_reclamada ? JSON.parse(data.quesitos_reclamada) : [];
-
-    const renderQuesitos = (container, quesitos) => {
-        container.innerHTML = quesitos.map((q, index) => `
-            <div class="quesito-item" data-index="${index}">
-                <span class="number">${index + 1}.</span>
-                <div class="fields">
-                    <textarea class="quesito-pergunta" placeholder="Digite a pergunta">${q.pergunta}</textarea>
-                    <textarea class="quesito-resposta" placeholder="Digite a resposta">${q.resposta}</textarea>
-                    <button type="button" class="remove-quesito-btn btn-danger">Remover</button>
-                </div>
-            </div>
-        `).join('');
-    };
-    
     renderQuesitos(document.getElementById('quesitos-juizo-list'), quesitosJuizo);
-    renderQuesitos(document.getElementById('quesitos-reclamante-list'), quesitosReclamante);
-    renderQuesitos(document.getElementById('quesitos-reclamada-list'), quesitosReclamada);
+    // REMOVIDO: As linhas para 'reclamante' e 'reclamada' foram apagadas.
 }
 
 function resetForm() {
     laudoForm.reset();
     currentPhotoPaths = [];
-    document.getElementById('photos-preview-container').innerHTML = '';
-    document.getElementById('quesitos-juizo-list').innerHTML = '';
-    document.getElementById('quesitos-reclamante-list').innerHTML = '';
-    document.getElementById('quesitos-reclamada-list').innerHTML = '';
+    if(document.getElementById('photos-preview-container')) document.getElementById('photos-preview-container').innerHTML = '';
+    
+    setupQuesitosUI();
 
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
