@@ -120,3 +120,8 @@ input[readonly] {
 .quesito-item .number { font-weight: bold; padding-top: 0.5rem; }
 .quesito-item .fields { flex-grow: 1; }
 .quesito-item .remove-quesito-btn { flex-shrink: 0; }
+
+/* Correção de cor para o texto do rodapé */
+.app-footer p {
+  color: rgba(255, 255, 255, 0.5) !important; /* Garante que o texto seja um cinza-claro */
+}
