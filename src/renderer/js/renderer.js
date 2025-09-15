@@ -146,7 +146,18 @@ document.addEventListener('DOMContentLoaded', () => {
 btnNew.addEventListener('click', () => showFormView());
 btnList.addEventListener('click', loadLaudos);
 btnCancel.addEventListener('click', () => { editingId = null; showListView(); });
-laudoForm.addEventListener('submit', async (e) => { e.preventDefault(); await saveOrUpdateLaudo(); });
+
+laudoForm.addEventListener('submit', async (e) => { 
+    e.preventDefault(); 
+    await saveOrUpdateLaudo(); 
+});
+
+// Impede que a tecla "Enter" salve o formulário
+laudoForm.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+    }
+});
 
 // Funções de Navegação e CRUD
 function showFormView(id = null) { editingId = id; listView.style.display = 'none'; formView.style.display = 'block'; loadingView.classList.add('d-none'); if (id) { loadLaudoForEditing(id); } else { resetForm(); } }
@@ -159,7 +170,6 @@ async function exportToWord(id) { /* Lógica de exportação futura */ }
 const getQuesitosFromDOM = (container) => Array.from(container.querySelectorAll('.quesito-item')).map(item => ({ pergunta: item.querySelector('.quesito-pergunta').value, resposta: item.querySelector('.quesito-resposta').value }));
 
 async function saveOrUpdateLaudo() {
-    // Formata os campos de altura e peso antes de salvar
     document.getElementById('altura').dispatchEvent(new Event('blur'));
     document.getElementById('peso').dispatchEvent(new Event('blur'));
 
@@ -188,15 +198,11 @@ function populateForm(data) {
         const element = document.getElementById(key);
         if (element && data[key] !== null) element.value = data[key];
     });
-
-    // CORREÇÃO: Dispara o evento 'blur' para formatar visualmente os campos ao carregar
     const alturaInput = document.getElementById('altura');
     const pesoInput = document.getElementById('peso');
     if (alturaInput.value) alturaInput.dispatchEvent(new Event('blur'));
     if (pesoInput.value) pesoInput.dispatchEvent(new Event('blur'));
-
     if (document.getElementById('data_nascimento').value) document.getElementById('data_nascimento').dispatchEvent(new Event('change'));
-
     currentPhotoPaths = data.fotos_paths ? JSON.parse(data.fotos_paths) : [];
     document.getElementById('photos-preview-container').innerHTML = currentPhotoPaths.map((path, index) => `<div class="photo-thumbnail"><img src="${path.replaceAll('\\', '/')}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`).join('');
     const quesitosJuizo = data.quesitos_juizo ? JSON.parse(data.quesitos_juizo) : [];
