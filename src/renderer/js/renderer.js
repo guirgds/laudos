@@ -1,4 +1,4 @@
-// renderer.js - VERSÃO FINAL COM TODAS AS CORREÇÕES
+// renderer.js - VERSÃO FINAL COM TODAS AS FUNCIONALIDADES
 
 // Variáveis globais
 let currentView = 'list';
@@ -15,7 +15,7 @@ const btnList = document.getElementById('btn-list');
 const btnCancel = document.getElementById('btn-cancel');
 const laudoForm = document.getElementById('laudo-form');
 
-// --- FUNÇÃO PARA INICIALIZAR A UI DOS QUESITOS ---
+// --- FUNÇÕES DE SETUP DA UI DINÂMICA ---
 function setupQuesitosUI() {
     const container = document.getElementById('quesitos-group-container');
     if (!container) return;
@@ -41,15 +41,19 @@ document.addEventListener('DOMContentLoaded', () => {
         imc: document.getElementById('imc'),
         btnAddPhoto: document.getElementById('btn-add-photo'),
         photosPreviewContainer: document.getElementById('photos-preview-container'),
-        quesitosContainer: document.getElementById('quesitos-group-container')
+        quesitosContainer: document.getElementById('quesitos-group-container'),
+        examesListContainer: document.getElementById('exames-list-container'),
+        btnAddExame: document.getElementById('btn-add-exame'),
+        passadoLaboralList: document.getElementById('passado-laboral-list'),
+        btnAddPassadoLaboral: document.getElementById('btn-add-passado-laboral')
     };
 
-    // --- APLICAÇÃO DAS MÁSCARAS COM IMask.js ---
+    // Máscaras
     if (inputs.processo) IMask(inputs.processo, { mask: '0000000-00.0000.0.00.0000' });
     if (inputs.cpf) IMask(inputs.cpf, { mask: '000.000.000-00' });
     if (inputs.valorHonorarios) IMask(inputs.valorHonorarios, { mask: 'R$ num', blocks: { num: { mask: Number, scale: 2, thousandsSeparator: '.', padFractionalZeros: true, radix: ',' } } });
 
-    // --- CÁLCULOS E EVENTOS ---
+    // Cálculos e Eventos
     const calcularIMC = () => {
         const alturaStr = String(inputs.altura.value).replace(',', '.');
         const pesoStr = String(inputs.peso.value).replace(',', '.');
@@ -85,42 +89,53 @@ document.addEventListener('DOMContentLoaded', () => {
         inputs.idade.value = idade;
     };
 
-    if (inputs.dataNascimento) {
-        inputs.dataNascimento.max = new Date().toISOString().split("T")[0];
-        inputs.dataNascimento.addEventListener('change', calcularIdade);
-    }
+    if (inputs.dataNascimento) { inputs.dataNascimento.max = new Date().toISOString().split("T")[0]; inputs.dataNascimento.addEventListener('change', calcularIdade); }
     if (inputs.peso) inputs.peso.addEventListener('input', calcularIMC);
     if (inputs.altura) inputs.altura.addEventListener('input', calcularIMC);
-
-    // Formatação automática ao sair do campo
-    if (inputs.altura) {
-        inputs.altura.addEventListener('blur', (e) => {
-            let alturaVal = parseFloat(String(e.target.value).replace(',', '.'));
-            if (!isNaN(alturaVal) && alturaVal > 3) {
-                e.target.value = (alturaVal / 100).toFixed(2).replace('.', ',');
-            }
-        });
-    }
-    if (inputs.peso) {
-        inputs.peso.addEventListener('blur', (e) => {
-            let pesoVal = parseFloat(String(e.target.value).replace(',', '.'));
-            if (!isNaN(pesoVal) && pesoVal > 400) {
-                e.target.value = (pesoVal / 10).toFixed(1).replace('.', ',');
-            }
-        });
-    }
+    if (inputs.altura) { inputs.altura.addEventListener('blur', (e) => { let alturaVal = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(alturaVal) && alturaVal > 3) e.target.value = (alturaVal / 100).toFixed(2).replace('.', ','); }); }
+    if (inputs.peso) { inputs.peso.addEventListener('blur', (e) => { let pesoVal = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(pesoVal) && pesoVal > 400) e.target.value = (pesoVal / 10).toFixed(1).replace('.', ','); }); }
 
     // Fotos
-    const renderPhotos = () => { inputs.photosPreviewContainer.innerHTML = currentPhotoPaths.map((path, index) => `<div class="photo-thumbnail"><img src="${path.replaceAll('\\', '/')}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`).join(''); };
-    if (inputs.btnAddPhoto) inputs.btnAddPhoto.addEventListener('click', async () => {
-        const result = await window.electronAPI.selectPhotos();
-        if (result.success) { currentPhotoPaths.push(...result.paths); renderPhotos(); }
-    });
-    if (inputs.photosPreviewContainer) inputs.photosPreviewContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('remove-photo-btn')) { currentPhotoPaths.splice(parseInt(e.target.dataset.index, 10), 1); renderPhotos(); }
-    });
+    const renderPhotos = () => { if(inputs.photosPreviewContainer) inputs.photosPreviewContainer.innerHTML = currentPhotoPaths.map((path, index) => `<div class="photo-thumbnail"><img src="${path.replaceAll('\\', '/')}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`).join(''); };
+    if (inputs.btnAddPhoto) inputs.btnAddPhoto.addEventListener('click', async () => { const result = await window.electronAPI.selectPhotos(); if (result.success) { currentPhotoPaths.push(...result.paths); renderPhotos(); } });
+    if (inputs.photosPreviewContainer) inputs.photosPreviewContainer.addEventListener('click', (e) => { if (e.target.classList.contains('remove-photo-btn')) { currentPhotoPaths.splice(parseInt(e.target.dataset.index, 10), 1); renderPhotos(); } });
     
-    // Quesitos
+    // Exames Dinâmicos
+    if (inputs.btnAddExame) {
+        inputs.btnAddExame.addEventListener('click', () => {
+            const newExame = document.createElement('div');
+            newExame.className = 'exame-item';
+            newExame.innerHTML = `<input type="text" class="form-control form-control-sm exame-descricao" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button>`;
+            inputs.examesListContainer.appendChild(newExame);
+            newExame.querySelector('input').focus();
+        });
+    }
+    if (inputs.examesListContainer) {
+        inputs.examesListContainer.addEventListener('click', (e) => { if (e.target.classList.contains('remove-exame-btn')) e.target.closest('.exame-item').remove(); });
+    }
+    
+    // Passado Laboral Dinâmico
+    if (inputs.btnAddPassadoLaboral) {
+        inputs.btnAddPassadoLaboral.addEventListener('click', () => {
+            const newEntry = document.createElement('div');
+            newEntry.className = 'passado-laboral-item';
+            newEntry.innerHTML = `
+                <input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa">
+                <input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função">
+                <input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período (ex: jan/2020 a dez/2022)">
+                <button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button>
+            `;
+            inputs.passadoLaboralList.appendChild(newEntry);
+            newEntry.querySelector('.laboral-empresa').focus();
+        });
+    }
+    if (inputs.passadoLaboralList) {
+        inputs.passadoLaboralList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-passado-laboral-btn')) e.target.closest('.passado-laboral-item').remove();
+        });
+    }
+
+    // Quesitos Dinâmicos
     if (inputs.quesitosContainer) {
         inputs.quesitosContainer.addEventListener('click', e => {
             const type = e.target.dataset.type;
@@ -133,10 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target.classList.contains('remove-quesito-btn')) {
                 const item = e.target.closest('.quesito-item');
                 const list = item.parentElement;
-                const index = parseInt(item.dataset.index, 10);
-                const quesitos = getQuesitosFromDOM(list);
-                quesitos.splice(index, 1);
-                renderQuesitos(list, quesitos);
+                item.remove();
+                list.querySelectorAll('.number').forEach((num, index) => { num.textContent = `${index + 1}.`; });
             }
         });
     }
@@ -146,18 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
 btnNew.addEventListener('click', () => showFormView());
 btnList.addEventListener('click', loadLaudos);
 btnCancel.addEventListener('click', () => { editingId = null; showListView(); });
-
-laudoForm.addEventListener('submit', async (e) => { 
-    e.preventDefault(); 
-    await saveOrUpdateLaudo(); 
-});
-
-// Impede que a tecla "Enter" salve o formulário
-laudoForm.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-        e.preventDefault();
-    }
-});
+laudoForm.addEventListener('submit', async (e) => { e.preventDefault(); await saveOrUpdateLaudo(); });
+laudoForm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); });
 
 // Funções de Navegação e CRUD
 function showFormView(id = null) { editingId = id; listView.style.display = 'none'; formView.style.display = 'block'; loadingView.classList.add('d-none'); if (id) { loadLaudoForEditing(id); } else { resetForm(); } }
@@ -167,18 +170,23 @@ async function loadLaudos() { showLoading(); try { const result = await window.e
 async function loadLaudoForEditing(id) { showLoading(); try { const result = await window.electronAPI.getLaudo(id); if (result.success) { populateForm(result.data); formView.style.display = 'block'; loadingView.classList.add('d-none'); } else { showNotification('Erro ao carregar laudo: ' + result.error, 'error'); showListView(); } } catch (error) { showNotification('Erro ao carregar laudo: ' + error.message, 'error'); showListView(); } }
 async function deleteLaudo(id) { if (confirm('Tem certeza?')) { showLoading(); try { const result = await window.electronAPI.deleteLaudo(id); if (result.success) { showNotification('Laudo excluído!', 'success'); loadLaudos(); } else { showNotification('Erro ao excluir: ' + result.error, 'error'); } } catch (error) { showNotification('Erro ao excluir: ' + error.message, 'error'); } } }
 async function exportToWord(id) { /* Lógica de exportação futura */ }
+
+// Funções para pegar dados das listas dinâmicas
 const getQuesitosFromDOM = (container) => Array.from(container.querySelectorAll('.quesito-item')).map(item => ({ pergunta: item.querySelector('.quesito-pergunta').value, resposta: item.querySelector('.quesito-resposta').value }));
+const getExamesFromDOM = () => Array.from(document.getElementById('exames-list-container').querySelectorAll('.exame-item')).map(item => ({ descricao: item.querySelector('.exame-descricao').value }));
+const getPassadoLaboralFromDOM = () => Array.from(document.getElementById('passado-laboral-list').querySelectorAll('.passado-laboral-item')).map(item => ({ empresa: item.querySelector('.laboral-empresa').value, funcao: item.querySelector('.laboral-funcao').value, periodo: item.querySelector('.laboral-periodo').value }));
 
 async function saveOrUpdateLaudo() {
     document.getElementById('altura').dispatchEvent(new Event('blur'));
     document.getElementById('peso').dispatchEvent(new Event('blur'));
-
     const formDataObj = new FormData(laudoForm);
     const formData = {};
     for (let [key, value] of formDataObj.entries()) formData[key] = value.trim();
     if (!formData.numero_processo || !formData.reclamante) { showNotification('Processo e Reclamante são obrigatórios.', 'error'); return; }
     formData.fotos_paths = JSON.stringify(currentPhotoPaths);
     formData.quesitos_juizo = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-juizo-list')));
+    formData.exames_complementares = JSON.stringify(getExamesFromDOM());
+    formData.passado_laboral = JSON.stringify(getPassadoLaboralFromDOM());
     showLoading();
     try {
         if (editingId) formData.id = editingId;
@@ -198,13 +206,19 @@ function populateForm(data) {
         const element = document.getElementById(key);
         if (element && data[key] !== null) element.value = data[key];
     });
-    const alturaInput = document.getElementById('altura');
-    const pesoInput = document.getElementById('peso');
-    if (alturaInput.value) alturaInput.dispatchEvent(new Event('blur'));
-    if (pesoInput.value) pesoInput.dispatchEvent(new Event('blur'));
     if (document.getElementById('data_nascimento').value) document.getElementById('data_nascimento').dispatchEvent(new Event('change'));
+    if (document.getElementById('peso').value || document.getElementById('altura').value) { document.getElementById('altura').dispatchEvent(new Event('blur')); document.getElementById('peso').dispatchEvent(new Event('blur')); }
     currentPhotoPaths = data.fotos_paths ? JSON.parse(data.fotos_paths) : [];
     document.getElementById('photos-preview-container').innerHTML = currentPhotoPaths.map((path, index) => `<div class="photo-thumbnail"><img src="${path.replaceAll('\\', '/')}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`).join('');
+    
+    const exames = data.exames_complementares ? JSON.parse(data.exames_complementares) : [];
+    const examesContainer = document.getElementById('exames-list-container');
+    examesContainer.innerHTML = exames.map(exame => `<div class="exame-item"><input type="text" class="form-control form-control-sm exame-descricao" value="${exame.descricao}" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button></div>`).join('');
+
+    const passadoLaboral = data.passado_laboral ? JSON.parse(data.passado_laboral) : [];
+    const passadoLaboralContainer = document.getElementById('passado-laboral-list');
+    passadoLaboralContainer.innerHTML = passadoLaboral.map(item => `<div class="passado-laboral-item"><input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa" value="${item.empresa || ''}"><input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função" value="${item.funcao || ''}"><input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período" value="${item.periodo || ''}"><button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button></div>`).join('');
+
     const quesitosJuizo = data.quesitos_juizo ? JSON.parse(data.quesitos_juizo) : [];
     renderQuesitos(document.getElementById('quesitos-juizo-list'), quesitosJuizo);
 }
@@ -213,6 +227,8 @@ function resetForm() {
     laudoForm.reset();
     currentPhotoPaths = [];
     if(document.getElementById('photos-preview-container')) document.getElementById('photos-preview-container').innerHTML = '';
+    if(document.getElementById('exames-list-container')) document.getElementById('exames-list-container').innerHTML = '';
+    if(document.getElementById('passado-laboral-list')) document.getElementById('passado-laboral-list').innerHTML = '';
     setupQuesitosUI();
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
@@ -225,3 +241,4 @@ function resetForm() {
 
 function formatDate(dateString) { if (!dateString) return 'N/A'; const date = new Date(dateString); const offset = date.getTimezoneOffset() * 60000; return new Date(date.getTime() + offset).toLocaleDateString('pt-BR'); }
 function showNotification(message, type) { const existing = document.querySelectorAll('.notification'); existing.forEach(n => n.remove()); const notification = document.createElement('div'); notification.className = `notification ${type}`; notification.textContent = message; document.body.appendChild(notification); setTimeout(() => notification.remove(), 4000); }
+

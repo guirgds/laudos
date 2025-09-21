@@ -1,16 +1,13 @@
-/* style.css - TEMA PROFISSIONAL ESCURO */
+/* style.css - TEMA PROFISSIONAL ESCURO (COM FOTOS PADRONIZADAS) */
 
 /* 1. DEFINIÇÃO DA NOVA PALETA DE CORES */
 :root {
-  /* Cor primária (detalhes, botões, abas ativas) */
-  --bs-primary: #20c997; /* Verde-azulado (Teal) */
+  --bs-primary: #20c997;
   --bs-primary-rgb: 32, 201, 151;
-
-  /* Cores de fundo */
-  --bs-body-bg: #212529;         /* Fundo principal (quase preto) */
-  --bs-body-color: #dee2e6;       /* Cor do texto principal (cinza claro) */
-  --card-bg: #343a40;             /* Fundo dos cards e formulários (cinza escuro) */
-  --border-color: #495057;        /* Cor das bordas */
+  --bs-body-bg: #212529;
+  --bs-body-color: #dee2e6;
+  --card-bg: #343a40;
+  --border-color: #495057;
 }
 
 /* 2. APLICAÇÃO GERAL DO TEMA */
@@ -18,110 +15,69 @@ body {
   background-color: var(--bs-body-bg);
   color: var(--bs-body-color);
 }
-
-/* Ajusta a cor dos títulos para branco */
-h1, h2, h4, h5, .h4 {
-    color: #fff;
-}
+h1, h2, h4, h5, .h4 { color: #fff; }
 
 /* 3. AJUSTES ESPECÍFICOS DOS COMPONENTES */
-
-/* Cabeçalho */
 .app-header {
-  background-color: #1c1f23; /* Um tom um pouco diferente para destacar */
+  background-color: #1c1f23;
   border-bottom: 1px solid var(--border-color) !important;
 }
-
-/* Rodapé */
 .app-footer {
   background-color: #1c1f23;
   border-top: 1px solid var(--border-color) !important;
 }
+.app-footer p {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+.nav-tabs { border-bottom-color: var(--border-color); }
+.nav-tabs .nav-link { color: var(--bs-body-color); border-color: transparent; }
+.nav-tabs .nav-link.active { color: var(--bs-primary); background-color: transparent; border-bottom-color: var(--bs-primary); }
+.nav-tabs .nav-link:hover { border-color: var(--border-color); }
+.card { background-color: var(--card-bg); border-color: var(--border-color); }
+.form-control, .form-select { background-color: #495057; color: var(--bs-body-color); border-color: #6c757d; }
+.form-control:focus { background-color: #495057; color: var(--bs-body-color); border-color: var(--bs-primary); box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25); }
+.form-control::placeholder { color: #adb5bd; }
+input[readonly] { background-color: #212529 !important; }
+.btn-secondary { background-color: #6c757d; border-color: #6c757d; }
 
-/* Abas */
-.nav-tabs {
-  border-bottom-color: var(--border-color);
-}
-.nav-tabs .nav-link {
-  color: var(--bs-body-color);
-  border-color: transparent;
-}
-.nav-tabs .nav-link.active {
-  color: var(--bs-primary);
-  background-color: transparent;
-  border-bottom-color: var(--bs-primary);
-}
-.nav-tabs .nav-link:hover {
-  border-color: var(--border-color);
-}
-
-/* Cards e Formulários */
-.card {
-  background-color: var(--card-bg);
-  border-color: var(--border-color);
-}
-.form-control, .form-select {
-  background-color: #495057;
-  color: var(--bs-body-color);
-  border-color: #6c757d;
-}
-.form-control:focus {
-  background-color: #495057;
-  color: var(--bs-body-color);
-  border-color: var(--bs-primary);
-  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-}
-.form-control::placeholder {
-  color: #adb5bd;
-}
-input[readonly] {
-  background-color: #212529 !important;
-}
-
-/* Botões */
-.btn-secondary {
-  background-color: #6c757d;
-  border-color: #6c757d;
-}
-
-/* Notificação */
-.notification {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 10px 20px;
-    border-radius: 5px;
-    color: white;
-    z-index: 1050;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-}
+.notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; border-radius: 5px; color: white; z-index: 1050; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
 .notification.success { background-color: #198754; }
 .notification.error { background-color: #dc3545; }
 
+/* --- ESTILOS DOS COMPONENTES CUSTOMIZADOS --- */
 
-/* --- ESTILOS DOS COMPONENTES CUSTOMIZADOS (FOTOS, QUESITOS) --- */
-.photos-preview { background-color: var(--bs-body-bg) !important; }
-.photos-preview img { border: 1px solid var(--border-color); }
+/* CORREÇÃO: Padroniza o tamanho das fotos */
+.photos-preview {
+  background-color: var(--bs-body-bg) !important;
+  min-height: 140px; /* Altura mínima para o container vazio */
+}
+.photo-thumbnail {
+  position: relative;
+  width: 120px;   /* Largura fixa do "molde" */
+  height: 120px;  /* Altura fixa do "molde" */
+}
+.photo-thumbnail img {
+  width: 100%;    /* Imagem ocupa 100% da largura do molde */
+  height: 100%;   /* Imagem ocupa 100% da altura do molde */
+  object-fit: cover; /* ESSENCIAL: Preenche o espaço sem distorcer, cortando o excesso */
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-color);
+}
 .remove-photo-btn {
   background-color: #dc3545; color: white; border: none;
-  position: absolute; top: -5px; right: -5px; width: 20px;
-  height: 20px; border-radius: 50%; display: flex;
+  position: absolute; top: -5px; right: -5px; width: 22px;
+  height: 22px; border-radius: 50%; display: flex;
   align-items: center; justify-content: center; font-size: 14px;
   line-height: 1; cursor: pointer;
 }
-.photo-thumbnail { position: relative; }
 
-.quesito-item {
-  border-color: var(--border-color) !important;
-  display: flex; gap: 15px; padding: 15px;
-  border-radius: 0.375rem; margin-bottom: 1rem; align-items: flex-start;
-}
+/* Quesitos */
+.quesito-item { border-color: var(--border-color) !important; display: flex; gap: 15px; padding: 15px; border-radius: 0.375rem; margin-bottom: 1rem; align-items: flex-start; }
 .quesito-item .number { font-weight: bold; padding-top: 0.5rem; }
 .quesito-item .fields { flex-grow: 1; }
 .quesito-item .remove-quesito-btn { flex-shrink: 0; }
 
-/* Correção de cor para o texto do rodapé */
-.app-footer p {
-  color: rgba(255, 255, 255, 0.5) !important; /* Garante que o texto seja um cinza-claro */
-}
+/* Exames */
+.exame-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.exame-item input { flex-grow: 1; }
+.exame-item .remove-btn { flex-shrink: 0; }
