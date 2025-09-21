@@ -1,4 +1,4 @@
-// renderer.js - VERSÃO FINAL COM TODAS AS FUNCIONALIDADES
+// renderer.js - VERSÃO FINAL COM EXAMES FÍSICOS DINÂMICOS
 
 // Variáveis globais
 let currentView = 'list';
@@ -45,7 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
         examesListContainer: document.getElementById('exames-list-container'),
         btnAddExame: document.getElementById('btn-add-exame'),
         passadoLaboralList: document.getElementById('passado-laboral-list'),
-        btnAddPassadoLaboral: document.getElementById('btn-add-passado-laboral')
+        btnAddPassadoLaboral: document.getElementById('btn-add-passado-laboral'),
+        selectTipoExame: document.getElementById('tipo-exame-especifico'),
+        examesEspecificosContainer: document.getElementById('exames-especificos-container')
     };
 
     // Máscaras
@@ -95,77 +97,53 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputs.altura) { inputs.altura.addEventListener('blur', (e) => { let alturaVal = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(alturaVal) && alturaVal > 3) e.target.value = (alturaVal / 100).toFixed(2).replace('.', ','); }); }
     if (inputs.peso) { inputs.peso.addEventListener('blur', (e) => { let pesoVal = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(pesoVal) && pesoVal > 400) e.target.value = (pesoVal / 10).toFixed(1).replace('.', ','); }); }
 
-    // Fotos
+    // Exames Físicos Específicos
+    if (inputs.selectTipoExame && typeof examesEspecificos !== 'undefined') {
+        inputs.selectTipoExame.innerHTML = '<option selected value="">Nenhum (Geral)</option>';
+        for (const key in examesEspecificos) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = key;
+            inputs.selectTipoExame.appendChild(option);
+        }
+
+        inputs.selectTipoExame.addEventListener('change', (e) => {
+            const selectedKey = e.target.value;
+            inputs.examesEspecificosContainer.innerHTML = '';
+            if (selectedKey && examesEspecificos[selectedKey]) {
+                const examesHtml = examesEspecificos[selectedKey].map(exame => `
+                    <div class="col-md-6">
+                        <label for="${exame.id}" class="form-label">${exame.label}</label>
+                        <input type="text" class="form-control form-control-sm" id="${exame.id}" name="${exame.id}" placeholder="${exame.placeholder || ''}">
+                    </div>
+                `).join('');
+                inputs.examesEspecificosContainer.innerHTML = examesHtml;
+            }
+        });
+    }
+
+    // Fotos, Exames Complementares, Passado Laboral, Quesitos
     const renderPhotos = () => { if(inputs.photosPreviewContainer) inputs.photosPreviewContainer.innerHTML = currentPhotoPaths.map((path, index) => `<div class="photo-thumbnail"><img src="${path.replaceAll('\\', '/')}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`).join(''); };
     if (inputs.btnAddPhoto) inputs.btnAddPhoto.addEventListener('click', async () => { const result = await window.electronAPI.selectPhotos(); if (result.success) { currentPhotoPaths.push(...result.paths); renderPhotos(); } });
     if (inputs.photosPreviewContainer) inputs.photosPreviewContainer.addEventListener('click', (e) => { if (e.target.classList.contains('remove-photo-btn')) { currentPhotoPaths.splice(parseInt(e.target.dataset.index, 10), 1); renderPhotos(); } });
-    
-    // Exames Dinâmicos
-    if (inputs.btnAddExame) {
-        inputs.btnAddExame.addEventListener('click', () => {
-            const newExame = document.createElement('div');
-            newExame.className = 'exame-item';
-            newExame.innerHTML = `<input type="text" class="form-control form-control-sm exame-descricao" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button>`;
-            inputs.examesListContainer.appendChild(newExame);
-            newExame.querySelector('input').focus();
-        });
-    }
-    if (inputs.examesListContainer) {
-        inputs.examesListContainer.addEventListener('click', (e) => { if (e.target.classList.contains('remove-exame-btn')) e.target.closest('.exame-item').remove(); });
-    }
-    
-    // Passado Laboral Dinâmico
-    if (inputs.btnAddPassadoLaboral) {
-        inputs.btnAddPassadoLaboral.addEventListener('click', () => {
-            const newEntry = document.createElement('div');
-            newEntry.className = 'passado-laboral-item';
-            newEntry.innerHTML = `
-                <input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa">
-                <input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função">
-                <input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período (ex: jan/2020 a dez/2022)">
-                <button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button>
-            `;
-            inputs.passadoLaboralList.appendChild(newEntry);
-            newEntry.querySelector('.laboral-empresa').focus();
-        });
-    }
-    if (inputs.passadoLaboralList) {
-        inputs.passadoLaboralList.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-passado-laboral-btn')) e.target.closest('.passado-laboral-item').remove();
-        });
-    }
-
-    // Quesitos Dinâmicos
-    if (inputs.quesitosContainer) {
-        inputs.quesitosContainer.addEventListener('click', e => {
-            const type = e.target.dataset.type;
-            if (type) {
-                const list = document.getElementById(`quesitos-${type}-list`);
-                const quesitos = getQuesitosFromDOM(list);
-                quesitos.push({ pergunta: '', resposta: '' });
-                renderQuesitos(list, quesitos);
-            }
-            if (e.target.classList.contains('remove-quesito-btn')) {
-                const item = e.target.closest('.quesito-item');
-                const list = item.parentElement;
-                item.remove();
-                list.querySelectorAll('.number').forEach((num, index) => { num.textContent = `${index + 1}.`; });
-            }
-        });
-    }
+    if (inputs.btnAddExame) { inputs.btnAddExame.addEventListener('click', () => { const newExame = document.createElement('div'); newExame.className = 'exame-item'; newExame.innerHTML = `<input type="text" class="form-control form-control-sm exame-descricao" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button>`; inputs.examesListContainer.appendChild(newExame); newExame.querySelector('input').focus(); }); }
+    if (inputs.examesListContainer) { inputs.examesListContainer.addEventListener('click', (e) => { if (e.target.classList.contains('remove-exame-btn')) e.target.closest('.exame-item').remove(); }); }
+    if (inputs.btnAddPassadoLaboral) { inputs.btnAddPassadoLaboral.addEventListener('click', () => { const newEntry = document.createElement('div'); newEntry.className = 'passado-laboral-item'; newEntry.innerHTML = `<input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa"><input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função"><input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período (ex: jan/2020 a dez/2022)"><button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button>`; inputs.passadoLaboralList.appendChild(newEntry); newEntry.querySelector('.laboral-empresa').focus(); }); }
+    if (inputs.passadoLaboralList) { inputs.passadoLaboralList.addEventListener('click', (e) => { if (e.target.classList.contains('remove-passado-laboral-btn')) e.target.closest('.passado-laboral-item').remove(); }); }
+    if (inputs.quesitosContainer) { inputs.quesitosContainer.addEventListener('click', e => { const type = e.target.dataset.type; if (type) { const list = document.getElementById(`quesitos-${type}-list`); const quesitos = getQuesitosFromDOM(list); quesitos.push({ pergunta: '', resposta: '' }); renderQuesitos(list, quesitos); } if (e.target.classList.contains('remove-quesito-btn')) { const item = e.target.closest('.quesito-item'); const list = item.parentElement; item.remove(); list.querySelectorAll('.number').forEach((num, index) => { num.textContent = `${index + 1}.`; }); } }); }
 });
 
-// Botões Principais
+// Botões Principais e Funções de Navegação
 btnNew.addEventListener('click', () => showFormView());
 btnList.addEventListener('click', loadLaudos);
 btnCancel.addEventListener('click', () => { editingId = null; showListView(); });
 laudoForm.addEventListener('submit', async (e) => { e.preventDefault(); await saveOrUpdateLaudo(); });
 laudoForm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); });
-
-// Funções de Navegação e CRUD
 function showFormView(id = null) { editingId = id; listView.style.display = 'none'; formView.style.display = 'block'; loadingView.classList.add('d-none'); if (id) { loadLaudoForEditing(id); } else { resetForm(); } }
 function showListView() { listView.style.display = 'block'; formView.style.display = 'none'; loadingView.classList.add('d-none'); resetForm(); }
 function showLoading() { listView.style.display = 'none'; formView.style.display = 'none'; loadingView.classList.remove('d-none'); loadingView.classList.add('d-flex'); }
+
+// Funções CRUD
 async function loadLaudos() { showLoading(); try { const result = await window.electronAPI.loadLaudos(); if (result.success) renderLaudosList(result.data); else showNotification('Erro ao carregar: ' + result.error, 'error'); } catch (error) { showNotification('Erro ao carregar: ' + error.message, 'error'); } showListView(); }
 async function loadLaudoForEditing(id) { showLoading(); try { const result = await window.electronAPI.getLaudo(id); if (result.success) { populateForm(result.data); formView.style.display = 'block'; loadingView.classList.add('d-none'); } else { showNotification('Erro ao carregar laudo: ' + result.error, 'error'); showListView(); } } catch (error) { showNotification('Erro ao carregar laudo: ' + error.message, 'error'); showListView(); } }
 async function deleteLaudo(id) { if (confirm('Tem certeza?')) { showLoading(); try { const result = await window.electronAPI.deleteLaudo(id); if (result.success) { showNotification('Laudo excluído!', 'success'); loadLaudos(); } else { showNotification('Erro ao excluir: ' + result.error, 'error'); } } catch (error) { showNotification('Erro ao excluir: ' + error.message, 'error'); } } }
@@ -213,14 +191,29 @@ function populateForm(data) {
     
     const exames = data.exames_complementares ? JSON.parse(data.exames_complementares) : [];
     const examesContainer = document.getElementById('exames-list-container');
-    examesContainer.innerHTML = exames.map(exame => `<div class="exame-item"><input type="text" class="form-control form-control-sm exame-descricao" value="${exame.descricao}" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button></div>`).join('');
+    if(examesContainer) examesContainer.innerHTML = exames.map(exame => `<div class="exame-item"><input type="text" class="form-control form-control-sm exame-descricao" value="${exame.descricao}" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button></div>`).join('');
 
     const passadoLaboral = data.passado_laboral ? JSON.parse(data.passado_laboral) : [];
     const passadoLaboralContainer = document.getElementById('passado-laboral-list');
-    passadoLaboralContainer.innerHTML = passadoLaboral.map(item => `<div class="passado-laboral-item"><input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa" value="${item.empresa || ''}"><input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função" value="${item.funcao || ''}"><input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período" value="${item.periodo || ''}"><button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button></div>`).join('');
+    if(passadoLaboralContainer) passadoLaboralContainer.innerHTML = passadoLaboral.map(item => `<div class="passado-laboral-item"><input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa" value="${item.empresa || ''}"><input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função" value="${item.funcao || ''}"><input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período" value="${item.periodo || ''}"><button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button></div>`).join('');
 
     const quesitosJuizo = data.quesitos_juizo ? JSON.parse(data.quesitos_juizo) : [];
     renderQuesitos(document.getElementById('quesitos-juizo-list'), quesitosJuizo);
+
+    const selectTipoExame = document.getElementById('tipo-exame-especifico');
+    if (data.tipo_exame_especifico) {
+        selectTipoExame.value = data.tipo_exame_especifico;
+        selectTipoExame.dispatchEvent(new Event('change'));
+        setTimeout(() => {
+            if (examesEspecificos[data.tipo_exame_especifico]) {
+                examesEspecificos[data.tipo_exame_especifico].forEach(exame => {
+                    if (data[exame.id] && document.getElementById(exame.id)) {
+                        document.getElementById(exame.id).value = data[exame.id];
+                    }
+                });
+            }
+        }, 100);
+    }
 }
 
 function resetForm() {
@@ -229,6 +222,8 @@ function resetForm() {
     if(document.getElementById('photos-preview-container')) document.getElementById('photos-preview-container').innerHTML = '';
     if(document.getElementById('exames-list-container')) document.getElementById('exames-list-container').innerHTML = '';
     if(document.getElementById('passado-laboral-list')) document.getElementById('passado-laboral-list').innerHTML = '';
+    if(document.getElementById('exames-especificos-container')) document.getElementById('exames-especificos-container').innerHTML = '';
+    if(document.getElementById('tipo-exame-especifico')) document.getElementById('tipo-exame-especifico').value = '';
     setupQuesitosUI();
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
