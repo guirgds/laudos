@@ -1,5 +1,6 @@
-// main.js - VERSÃO FINAL E CORRIGIDA
-const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron'); // 1. Adicionado 'protocol'
+// src/main/main.js
+
+const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const db = require('../../database/db');
@@ -27,7 +28,6 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  // 2. ADIÇÃO DO PROTOCOLO SEGURO (ESSENCIAL PARA AS FOTOS)
   protocol.registerFileProtocol('safe-file', (request, callback) => {
     const url = request.url.replace('safe-file://', '');
     const decodedUrl = decodeURI(url);
@@ -39,14 +39,20 @@ app.whenReady().then(async () => {
     }
   });
 
+  // BLOCO DE INICIALIZAÇÃO DO BANCO DE DADOS ATUALIZADO COM TRATAMENTO DE ERRO
   try {
     await db.initDatabase();
-    console.log('Banco de dados inicializado com sucesso.');
+    console.log('Banco de dados pronto para uso.');
+    createWindow();
   } catch (error) {
-    console.error('Erro ao inicializar banco de dados:', error);
+    console.error('FALHA CRÍTICA AO INICIAR BANCO DE DADOS:', error);
+    dialog.showErrorBox(
+      'Erro Crítico na Inicialização',
+      `Não foi possível iniciar o banco de dados. O aplicativo será fechado.\n\nDetalhes: ${error.message}`
+    );
+    app.quit();
+    return;
   }
-
-  createWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -97,6 +103,27 @@ ipcMain.handle('delete-laudo', async (event, id) => {
     return { success: false, error: error.message };
   }
 });
+
+ipcMain.handle('get-doencas', async () => {
+  try {
+      const doencas = await db.getDoencasComTestes();
+      return { success: true, data: doencas };
+  } catch (error) {
+      console.error(error);
+      return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('save-doenca', async (event, doenca) => {
+  try {
+      const result = await db.saveDoencaComTestes(doenca);
+      return { success: true, data: result };
+  } catch (error) {
+      console.error(error);
+      return { success: false, error: error.message };
+  }
+});
+
 
 ipcMain.handle('export-word', async (event, laudoData) => {
   try {
