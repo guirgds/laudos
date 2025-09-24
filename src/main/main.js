@@ -1,8 +1,8 @@
-// main.js
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+// main.js - VERSÃO COMPLETA E FINAL
+const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const db = require('../../database/db'); // Caminho CORRETO
+const db = require('../../database/db'); // Caminho para o seu arquivo de banco de dados
 
 let mainWindow;
 
@@ -14,11 +14,9 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
-    // O caminho do ícone também precisa ser corrigido para a raiz do projeto
     icon: path.join(__dirname, '../../build/icons/icon.ico'), 
   });
 
-  // Caminho CORRETO para o index.html
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   if (process.argv.includes('--dev')) {
@@ -29,6 +27,18 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Configura um protocolo para servir arquivos locais de forma segura (essencial para as fotos)
+  protocol.registerFileProtocol('safe-file', (request, callback) => {
+    const url = request.url.replace('safe-file://', '');
+    const decodedUrl = decodeURI(url);
+    try {
+      return callback(path.normalize(decodedUrl));
+    } catch (error) {
+      console.error('ERRO: Não foi possível carregar o arquivo via protocolo safe-file:', error);
+      return callback({ error: -6 }); // FILE_NOT_FOUND
+    }
+  });
+
   try {
     await db.initDatabase();
     console.log('Banco de dados inicializado com sucesso.');
@@ -49,9 +59,10 @@ app.on('window-all-closed', () => {
 
 // ------------------ IPC HANDLERS ------------------
 
+// --- Handlers para Laudos ---
+
 ipcMain.handle('load-laudos', async () => {
   try {
-    // CORREÇÃO: Nome da função
     const laudos = await db.loadLaudos(); 
     return { success: true, data: laudos };
   } catch (error) {
@@ -62,7 +73,6 @@ ipcMain.handle('load-laudos', async () => {
 
 ipcMain.handle('get-laudo', async (event, id) => {
   try {
-    // CORREÇÃO: Nome da função
     const laudo = await db.getLaudo(id); 
     return { success: true, data: laudo };
   } catch (error) {
@@ -71,7 +81,6 @@ ipcMain.handle('get-laudo', async (event, id) => {
   }
 });
 
-// O save e o update podem usar a mesma função do db.js
 ipcMain.handle('save-laudo', async (event, laudoData) => {
   try {
     const result = await db.saveLaudo(laudoData);
@@ -81,10 +90,6 @@ ipcMain.handle('save-laudo', async (event, laudoData) => {
     return { success: false, error: error.message };
   }
 });
-
-// A função 'update-laudo' no main.js pode ser removida ou redirecionada,
-// mas vamos mantê-la simples por enquanto e fazer o renderer.js chamar save-laudo
-// tanto para criar quanto para atualizar.
 
 ipcMain.handle('delete-laudo', async (event, id) => {
   try {
@@ -96,30 +101,7 @@ ipcMain.handle('delete-laudo', async (event, id) => {
   }
 });
 
-// Renomeando para 'export-word' para corresponder ao preload.js
-ipcMain.handle('export-word', async (event, laudoData) => {
-  try {
-    const { filePath } = await dialog.showSaveDialog(mainWindow, {
-      defaultPath: `laudo-${laudoData.numero_processo || Date.now()}.docx`,
-      filters: [{ name: 'Documentos Word', extensions: ['docx'] }],
-    });
-
-    if (!filePath) return { success: false, error: 'Operação cancelada' };
-
-    // Lógica para gerar o Word virá aqui
-    console.log(`Salvar laudo em: ${filePath}`);
-
-    return { success: true, data: { path: filePath } };
-  } catch (error) {
-    console.error(error);
-    return { success: false, error: error.message };
-  }
-});
-
-// src/main/main.js
-
 ipcMain.handle('select-photos', async () => {
-  // Abre a janela para selecionar arquivos
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile', 'multiSelections'],
     filters: [{ name: 'Images', extensions: ['jpg', 'png', 'gif', 'jpeg'] }]
@@ -129,21 +111,57 @@ ipcMain.handle('select-photos', async () => {
     return { success: false, error: 'Seleção cancelada' };
   }
 
-  // Cria uma pasta para as imagens dentro dos dados do usuário, se não existir
   const imagesDir = path.join(app.getPath('userData'), 'laudo_images');
   if (!fs.existsSync(imagesDir)){
-      fs.mkdirSync(imagesDir);
+      fs.mkdirSync(imagesDir, { recursive: true });
   }
 
   const newPaths = [];
   for (const oldPath of result.filePaths) {
     const fileName = `${Date.now()}-${path.basename(oldPath)}`;
     const newPath = path.join(imagesDir, fileName);
-
-    // Copia a imagem para a pasta do app
     fs.copyFileSync(oldPath, newPath);
     newPaths.push(newPath);
   }
 
   return { success: true, paths: newPaths };
+});
+
+ipcMain.handle('export-word', async (event, laudoData) => {
+  try {
+    const { filePath } = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: `laudo-${laudoData.numero_processo || Date.now()}.docx`,
+      filters: [{ name: 'Documentos Word', extensions: ['docx'] }],
+    });
+
+    if (!filePath) return { success: false, error: 'Operação cancelada' };
+    console.log(`Salvar laudo em: ${filePath}`);
+    return { success: true, data: { path: filePath } };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+});
+
+
+// --- Handlers para Gerenciamento de Doenças ---
+
+ipcMain.handle('get-doencas', async () => {
+  try {
+    const doencas = await db.getDoencasComTestes();
+    return { success: true, data: doencas };
+  } catch (error) {
+    console.error('Erro ao buscar doenças no main process:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('save-doenca', async (event, doenca) => {
+  try {
+    await db.saveDoencaComTestes(doenca);
+    return { success: true };
+  } catch (error) {
+    console.error('Erro ao salvar doença no main process:', error);
+    return { success: false, error: error.message };
+  }
 });

@@ -9,18 +9,17 @@
 </head>
 <body>
   <div class="app-container d-flex flex-column vh-100">
-    <!-- CABEÇALHO -->
     <header class="app-header p-3 border-bottom shadow-sm">
       <div class="d-flex justify-content-between align-items-center">
         <h1 class="h4 m-0 text-white">Laudos App</h1>
         <div class="header-actions">
           <button id="btn-new" class="btn btn-light">Novo Laudo</button>
           <button id="btn-list" class="btn btn-outline-light">Lista de Laudos</button>
+          <button id="btn-manage-doencas" class="btn btn-outline-info ms-2">Gerenciar Doenças</button>
         </div>
       </div>
     </header>
 
-    <!-- CONTEÚDO PRINCIPAL -->
     <main class="app-main flex-grow-1 p-3 p-md-4 overflow-auto">
       <div id="list-view" class="container-fluid">
         <h2 class="mb-4">Laudos Cadastrados</h2>
@@ -39,11 +38,9 @@
         </ul>
 
         <form id="laudo-form" class="tab-content">
-          <!-- Aba Processo -->
           <div class="tab-pane fade show active" id="tab-processo" role="tabpanel">
             <div class="card card-body"><h5 class="card-title">Dados do Processo</h5><div class="row g-3"><div class="col-md-6"><label for="numero_processo" class="form-label">Número do Processo:</label><input type="text" class="form-control" id="numero_processo" name="numero_processo" required /></div><div class="col-md-6"><label for="vara_trabalho" class="form-label">Vara do Trabalho:</label><input type="text" class="form-control" id="vara_trabalho" name="vara_trabalho"/></div><div class="col-12"><label for="cidade" class="form-label">Cidade da Vara:</label><input type="text" class="form-control" id="cidade" name="cidade"/></div><div class="col-md-6"><label for="reclamante" class="form-label">Reclamante:</label><input type="text" class="form-control" id="reclamante" name="reclamante" required /></div><div class="col-md-6"><label for="reclamada" class="form-label">Reclamada:</label><input type="text" class="form-control" id="reclamada" name="reclamada" /></div></div></div>
           </div>
-          <!-- Aba Reclamante -->
           <div class="tab-pane fade" id="tab-paciente" role="tabpanel">
             <div class="card card-body mb-3"><h5 class="card-title">Dados Pessoais</h5><div class="row g-3"><div class="col-md-4"><label for="data_nascimento" class="form-label">Data de Nascimento:</label><input type="date" class="form-control" id="data_nascimento" name="data_nascimento" /></div><div class="col-md-2"><label for="idade" class="form-label">Idade:</label><input type="text" class="form-control" id="idade" name="idade" readonly /></div><div class="col-md-3"><label for="cpf" class="form-label">CPF:</label><input type="text" class="form-control" id="cpf" name="cpf" /></div><div class="col-md-3"><label for="naturalidade" class="form-label">Naturalidade:</label><input type="text" class="form-control" id="naturalidade" name="naturalidade" /></div></div></div>
             <div class="card card-body mb-3"><h5 class="card-title">Dados Laborais na Reclamada</h5><div class="row g-3"><div class="col-md-6"><label for="funcao_reclamante" class="form-label">Função:</label><input type="text" class="form-control" id="funcao_reclamante" name="funcao_reclamante" /></div><div class="col-md-3"><label for="data_admissao" class="form-label">Data de Admissão:</label><input type="date" class="form-control" id="data_admissao" name="data_admissao" /></div><div class="col-md-3"><label for="data_demissao" class="form-label">Data de Demissão:</label><input type="date" class="form-control" id="data_demissao" name="data_demissao" /></div></div></div>
@@ -57,16 +54,13 @@
                 <div class="col-12"><label class="form-label">Fotos:</label><div><button type="button" id="btn-add-photo" class="btn btn-outline-secondary btn-sm">Adicionar Fotos</button></div><div id="photos-preview-container" class="photos-preview mt-2 border rounded p-2 d-flex flex-wrap gap-2"></div></div>
             </div></div>
           </div>
-          <!-- Aba Anamnese -->
           <div class="tab-pane fade" id="tab-anamnese" role="tabpanel">
             <div class="card card-body"><h5 class="card-title">Anamnese e Histórico</h5><div class="row g-3"><div class="col-12"><label for="queixa_principal" class="form-label">Queixa Principal:</label><textarea class="form-control" id="queixa_principal" name="queixa_principal" rows="3"></textarea></div><div class="col-12"><label for="historia_molestia" class="form-label">História Pregressa da Moléstia:</label><textarea class="form-control" id="historia_molestia" name="historia_molestia" rows="8"></textarea></div><div class="col-12"><label class="form-label">Passado Laboral (CTPS):</label><div id="passado-laboral-list" class="dynamic-list-container"></div><button type="button" id="btn-add-passado-laboral" class="btn btn-outline-secondary btn-sm mt-2">Adicionar Experiência</button></div></div></div>
           </div>
-          <!-- Aba Discussão/Conclusão -->
           <div class="tab-pane fade" id="tab-conclusao" role="tabpanel">
             <div class="card card-body mb-3"><h5 class="card-title">Análise Técnica</h5><div class="row g-3"><div class="col-12"><label class="form-label">Exames Complementares:</label><div id="exames-list-container" class="dynamic-list-container"></div><button type="button" id="btn-add-exame" class="btn btn-outline-secondary btn-sm mt-2">Adicionar Exame</button></div><div class="col-12"><label for="discussao" class="form-label">Considerações Médicas / Discussão:</label><textarea class="form-control" id="discussao" name="discussao" rows="8"></textarea></div><div class="col-12"><label for="conclusao" class="form-label">Conclusão:</label><textarea class="form-control" id="conclusao" name="conclusao" rows="5"></textarea></div></div></div>
             <div class="card card-body"><h5 class="card-title">Respostas aos Quesitos</h5><div id="quesitos-group-container"></div></div>
           </div>
-          <!-- Aba Finalização -->
           <div class="tab-pane fade" id="tab-finalizacao" role="tabpanel">
              <div class="card card-body mb-3"><h5 class="card-title">Dados do Perito e Honorários</h5><div class="row g-3"><div class="col-md-6"><label for="perito" class="form-label">Perito:</label><input type="text" class="form-control" id="perito" name="perito" /></div><div class="col-md-6"><label for="crm" class="form-label">CRM:</label><input type="text" class="form-control" id="crm" name="crm" /></div><div class="col-md-6"><label for="valor_honorarios" class="form-label">Valor de Honorários (R$):</label><input type="text" class="form-control" id="valor_honorarios" name="valor_honorarios" /></div><div class="col-md-6"><label for="valor_por_extenso" class="form-label">Valor por Extenso:</label><input type="text" class="form-control" id="valor_por_extenso" name="valor_por_extenso" /></div></div></div>
             <div class="card card-body"><h5 class="card-title">Datas</h5><div class="row g-3"><div class="col-md-4"><label for="data_pericia" class="form-label">Data da Perícia:</label><input type="date" class="form-control" id="data_pericia" name="data_pericia" /></div><div class="col-md-4"><label for="hora_pericia" class="form-label">Hora da Perícia:</label><input type="time" class="form-control" id="hora_pericia" name="hora_pericia" /></div><div class="col-md-4"><label for="data_laudo" class="form-label">Data do Laudo:</label><input type="date" class="form-control" id="data_laudo" name="data_laudo" /></div></div></div>
@@ -87,12 +81,23 @@
     <footer class="app-footer p-3 text-center border-top mt-auto">
       <p class="m-0">Sistema de Laudos Médicos &copy; <span id="year"></span></p>
     </footer>
+
+    <div class="modal fade" id="modal-doencas" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Gerenciar Doenças e Testes</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" id="doencas-management-content">
+               </div>
+        </div>
+      </div>
+    </div>
   </div>
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://unpkg.com/imask"></script>
-  <script src="js/exames-especificos.js"></script>
+  <script src="js/imask.min.js"></script>
   <script src="js/renderer.js"></script>
 </body>
 </html>
-

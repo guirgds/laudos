@@ -1,11 +1,11 @@
-// renderer.js - VERSÃO FINAL COM EXAMES FÍSICOS DINÂMICOS
+// renderer.js - VERSÃO COMPLETA E FINAL COM GERENCIAMENTO DINÂMICO DE DOENÇAS
 
-// Variáveis globais
-let currentView = 'list';
+// --- VARIÁVEIS GLOBAIS ---
 let editingId = null;
 let currentPhotoPaths = [];
+let DADOS_DOENCAS = {}; // Armazena as doenças e testes carregados do banco de dados
 
-// Elementos da interface
+// --- ELEMENTOS DA INTERFACE ---
 const listView = document.getElementById('list-view');
 const formView = document.getElementById('form-view');
 const loadingView = document.getElementById('loading-view');
@@ -14,6 +14,11 @@ const btnNew = document.getElementById('btn-new');
 const btnList = document.getElementById('btn-list');
 const btnCancel = document.getElementById('btn-cancel');
 const laudoForm = document.getElementById('laudo-form');
+const btnManageDoencas = document.getElementById('btn-manage-doencas');
+const modalDoencasElement = document.getElementById('modal-doencas');
+const modalDoencas = modalDoencasElement ? new bootstrap.Modal(modalDoencasElement) : null;
+const doencasManagementContent = document.getElementById('doencas-management-content');
+
 
 // --- FUNÇÕES DE SETUP DA UI DINÂMICA ---
 function setupQuesitosUI() {
@@ -23,12 +28,130 @@ function setupQuesitosUI() {
     container.innerHTML = quesitoTemplate('juizo', 'Quesitos do Juízo');
 }
 
+
+// --- LÓGICA DE GERENCIAMENTO DE DOENÇAS ---
+
+// Função para renderizar o conteúdo da modal de gerenciamento
+const renderDoencasManagement = () => {
+    // Conteúdo HTML da modal, incluindo o formulário para adicionar novas doenças
+    doencasManagementContent.innerHTML = `
+        <h4>Adicionar Nova Doença</h4>
+        <form id="form-add-doenca">
+            <div class="mb-3">
+                <label for="new-doenca-name" class="form-label">Nome da Doença (Ex: PAIR, LER/DORT):</label>
+                <input type="text" id="new-doenca-name" class="form-control" required>
+            </div>
+            <h5>Testes Específicos para esta Doença</h5>
+            <div id="new-testes-container" class="mb-3">
+                </div>
+            <button type="button" id="btn-add-teste-field" class="btn btn-outline-secondary btn-sm">Adicionar Campo de Teste</button>
+            <hr>
+            <div class="text-end">
+                <button type="submit" class="btn btn-primary">Salvar Nova Doença</button>
+            </div>
+        </form>
+    `;
+};
+
+if (btnManageDoencas) {
+    btnManageDoencas.addEventListener('click', () => {
+        renderDoencasManagement();
+        modalDoencas.show();
+    });
+}
+
+if (modalDoencasElement) {
+    // Delegação de eventos para a modal (adicionar/remover campos de teste)
+    modalDoencasElement.addEventListener('click', (e) => {
+        if (e.target.id === 'btn-add-teste-field') {
+            const container = document.getElementById('new-testes-container');
+            const newTesteRow = document.createElement('div');
+            newTesteRow.className = 'row g-2 mb-2 align-items-center';
+            newTesteRow.innerHTML = `
+                <div class="col-md-5"><input type="text" class="form-control form-control-sm new-teste-label" placeholder="Nome do Teste (ex: Otoscopia)" required></div>
+                <div class="col-md-5"><input type="text" class="form-control form-control-sm new-teste-placeholder" placeholder="Texto de Exemplo (placeholder)"></div>
+                <div class="col-md-2 text-end"><button type="button" class="btn btn-sm btn-danger remove-teste-field">Remover</button></div>
+            `;
+            container.appendChild(newTesteRow);
+        }
+
+        if (e.target.classList.contains('remove-teste-field')) {
+            e.target.closest('.row').remove();
+        }
+    });
+
+    // Evento para salvar a nova doença
+    modalDoencasElement.addEventListener('submit', async (e) => {
+        if (e.target.id === 'form-add-doenca') {
+            e.preventDefault();
+            const nomeDoenca = document.getElementById('new-doenca-name').value;
+            if (!nomeDoenca || !nomeDoenca.trim()) {
+                alert('O nome da doença é obrigatório.');
+                return;
+            }
+
+            const testesFields = document.querySelectorAll('#new-testes-container .row');
+            
+            const novaDoenca = {
+                nome: nomeDoenca,
+                testes: []
+            };
+
+            testesFields.forEach(row => {
+                const label = row.querySelector('.new-teste-label').value;
+                const placeholder = row.querySelector('.new-teste-placeholder').value;
+                const test_id = label.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_{2,}/g, '_');
+                
+                if (label && label.trim()) {
+                    novaDoenca.testes.push({ label, placeholder, test_id });
+                }
+            });
+
+            const result = await window.electronAPI.saveDoenca(novaDoenca);
+            if (result.success) {
+                alert('Doença salva com sucesso!');
+                modalDoencas.hide();
+                loadDoencas(); 
+            } else {
+                alert('Erro ao salvar doença: ' + result.error);
+            }
+        }
+    });
+}
+
+// --- ATUALIZAÇÃO DA LÓGICA DE CARREGAMENTO ---
+
+async function loadDoencas() {
+    const result = await window.electronAPI.getDoencas();
+    if (result.success) {
+        DADOS_DOENCAS = result.data;
+        populateDoencasDropdown();
+    } else {
+        showNotification("Não foi possível carregar os modelos de doenças.", "error");
+    }
+}
+
+function populateDoencasDropdown() {
+    const select = document.getElementById('tipo-exame-especifico');
+    if (!select) return;
+
+    select.innerHTML = '<option selected value="">Nenhum (Geral)</option>';
+    for (const nomeDoenca in DADOS_DOENCAS) {
+        const option = document.createElement('option');
+        option.value = nomeDoenca;
+        option.textContent = nomeDoenca;
+        select.appendChild(option);
+    }
+}
+
+
 // --- INICIALIZAÇÃO E EVENTOS PRINCIPAIS ---
 document.addEventListener('DOMContentLoaded', () => {
     const yearSpan = document.getElementById('year');
     if (yearSpan) yearSpan.textContent = new Date().getFullYear();
     
     loadLaudos();
+    loadDoencas();
 
     const inputs = {
         processo: document.getElementById('numero_processo'),
@@ -50,12 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
         examesEspecificosContainer: document.getElementById('exames-especificos-container')
     };
 
-    // Máscaras
     if (inputs.processo) IMask(inputs.processo, { mask: '0000000-00.0000.0.00.0000' });
     if (inputs.cpf) IMask(inputs.cpf, { mask: '000.000.000-00' });
     if (inputs.valorHonorarios) IMask(inputs.valorHonorarios, { mask: 'R$ num', blocks: { num: { mask: Number, scale: 2, thousandsSeparator: '.', padFractionalZeros: true, radix: ',' } } });
 
-    // Cálculos e Eventos
     const calcularIMC = () => {
         const alturaStr = String(inputs.altura.value).replace(',', '.');
         const pesoStr = String(inputs.peso.value).replace(',', '.');
@@ -80,10 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const calcularIdade = () => {
         const dataValue = inputs.dataNascimento.value;
         if (!dataValue) { inputs.idade.value = ''; return; }
-        const [year] = dataValue.split('-').map(Number);
-        if (isNaN(year) || year > 9999 || year < 1000) { inputs.idade.value = 'Ano inválido'; return; }
         const hoje = new Date(); const nascimento = new Date(dataValue);
-        nascimento.setHours(0, 0, 0, 0);
         if (nascimento > hoje) { inputs.idade.value = 'Data futura'; return; }
         let idade = hoje.getFullYear() - nascimento.getFullYear();
         const m = hoje.getMonth() - nascimento.getMonth();
@@ -97,24 +215,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputs.altura) { inputs.altura.addEventListener('blur', (e) => { let alturaVal = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(alturaVal) && alturaVal > 3) e.target.value = (alturaVal / 100).toFixed(2).replace('.', ','); }); }
     if (inputs.peso) { inputs.peso.addEventListener('blur', (e) => { let pesoVal = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(pesoVal) && pesoVal > 400) e.target.value = (pesoVal / 10).toFixed(1).replace('.', ','); }); }
 
-    // Exames Físicos Específicos
-    if (inputs.selectTipoExame && typeof examesEspecificos !== 'undefined') {
-        inputs.selectTipoExame.innerHTML = '<option selected value="">Nenhum (Geral)</option>';
-        for (const key in examesEspecificos) {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = key;
-            inputs.selectTipoExame.appendChild(option);
-        }
-
+    if (inputs.selectTipoExame) {
         inputs.selectTipoExame.addEventListener('change', (e) => {
             const selectedKey = e.target.value;
             inputs.examesEspecificosContainer.innerHTML = '';
-            if (selectedKey && examesEspecificos[selectedKey]) {
-                const examesHtml = examesEspecificos[selectedKey].map(exame => `
+            if (selectedKey && DADOS_DOENCAS[selectedKey]) {
+                const examesHtml = DADOS_DOENCAS[selectedKey].testes.map(exame => `
                     <div class="col-md-6">
-                        <label for="${exame.id}" class="form-label">${exame.label}</label>
-                        <input type="text" class="form-control form-control-sm" id="${exame.id}" name="${exame.id}" placeholder="${exame.placeholder || ''}">
+                        <label for="${exame.test_id}" class="form-label">${exame.label}</label>
+                        <input type="text" class="form-control form-control-sm" id="${exame.test_id}" name="${exame.test_id}" placeholder="${exame.placeholder || ''}">
                     </div>
                 `).join('');
                 inputs.examesEspecificosContainer.innerHTML = examesHtml;
@@ -122,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Fotos, Exames Complementares, Passado Laboral, Quesitos
     const renderPhotos = () => { if(inputs.photosPreviewContainer) inputs.photosPreviewContainer.innerHTML = currentPhotoPaths.map((path, index) => `<div class="photo-thumbnail"><img src="${path.replaceAll('\\', '/')}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`).join(''); };
     if (inputs.btnAddPhoto) inputs.btnAddPhoto.addEventListener('click', async () => { const result = await window.electronAPI.selectPhotos(); if (result.success) { currentPhotoPaths.push(...result.paths); renderPhotos(); } });
     if (inputs.photosPreviewContainer) inputs.photosPreviewContainer.addEventListener('click', (e) => { if (e.target.classList.contains('remove-photo-btn')) { currentPhotoPaths.splice(parseInt(e.target.dataset.index, 10), 1); renderPhotos(); } });
@@ -133,7 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputs.quesitosContainer) { inputs.quesitosContainer.addEventListener('click', e => { const type = e.target.dataset.type; if (type) { const list = document.getElementById(`quesitos-${type}-list`); const quesitos = getQuesitosFromDOM(list); quesitos.push({ pergunta: '', resposta: '' }); renderQuesitos(list, quesitos); } if (e.target.classList.contains('remove-quesito-btn')) { const item = e.target.closest('.quesito-item'); const list = item.parentElement; item.remove(); list.querySelectorAll('.number').forEach((num, index) => { num.textContent = `${index + 1}.`; }); } }); }
 });
 
-// Botões Principais e Funções de Navegação
+// --- FUNÇÕES GLOBAIS DE CONTROLE ---
+
 btnNew.addEventListener('click', () => showFormView());
 btnList.addEventListener('click', loadLaudos);
 btnCancel.addEventListener('click', () => { editingId = null; showListView(); });
@@ -143,16 +252,13 @@ function showFormView(id = null) { editingId = id; listView.style.display = 'non
 function showListView() { listView.style.display = 'block'; formView.style.display = 'none'; loadingView.classList.add('d-none'); resetForm(); }
 function showLoading() { listView.style.display = 'none'; formView.style.display = 'none'; loadingView.classList.remove('d-none'); loadingView.classList.add('d-flex'); }
 
-// Funções CRUD
 async function loadLaudos() { showLoading(); try { const result = await window.electronAPI.loadLaudos(); if (result.success) renderLaudosList(result.data); else showNotification('Erro ao carregar: ' + result.error, 'error'); } catch (error) { showNotification('Erro ao carregar: ' + error.message, 'error'); } showListView(); }
 async function loadLaudoForEditing(id) { showLoading(); try { const result = await window.electronAPI.getLaudo(id); if (result.success) { populateForm(result.data); formView.style.display = 'block'; loadingView.classList.add('d-none'); } else { showNotification('Erro ao carregar laudo: ' + result.error, 'error'); showListView(); } } catch (error) { showNotification('Erro ao carregar laudo: ' + error.message, 'error'); showListView(); } }
 async function deleteLaudo(id) { if (confirm('Tem certeza?')) { showLoading(); try { const result = await window.electronAPI.deleteLaudo(id); if (result.success) { showNotification('Laudo excluído!', 'success'); loadLaudos(); } else { showNotification('Erro ao excluir: ' + result.error, 'error'); } } catch (error) { showNotification('Erro ao excluir: ' + error.message, 'error'); } } }
-async function exportToWord(id) { /* Lógica de exportação futura */ }
 
-// Funções para pegar dados das listas dinâmicas
 const getQuesitosFromDOM = (container) => Array.from(container.querySelectorAll('.quesito-item')).map(item => ({ pergunta: item.querySelector('.quesito-pergunta').value, resposta: item.querySelector('.quesito-resposta').value }));
-const getExamesFromDOM = () => Array.from(document.getElementById('exames-list-container').querySelectorAll('.exame-item')).map(item => ({ descricao: item.querySelector('.exame-descricao').value }));
-const getPassadoLaboralFromDOM = () => Array.from(document.getElementById('passado-laboral-list').querySelectorAll('.passado-laboral-item')).map(item => ({ empresa: item.querySelector('.laboral-empresa').value, funcao: item.querySelector('.laboral-funcao').value, periodo: item.querySelector('.laboral-periodo').value }));
+const getExamesFromDOM = () => Array.from(document.getElementById('exames-list-container')).querySelectorAll('.exame-item').map(item => ({ descricao: item.querySelector('.exame-descricao').value }));
+const getPassadoLaboralFromDOM = () => Array.from(document.getElementById('passado-laboral-list')).querySelectorAll('.passado-laboral-item').map(item => ({ empresa: item.querySelector('.laboral-empresa').value, funcao: item.querySelector('.laboral-funcao').value, periodo: item.querySelector('.laboral-periodo').value }));
 
 async function saveOrUpdateLaudo() {
     document.getElementById('altura').dispatchEvent(new Event('blur'));
@@ -174,8 +280,7 @@ async function saveOrUpdateLaudo() {
     } catch (error) { showNotification('Erro ao salvar: ' + error.message, 'error'); showFormView(editingId); }
 }
 
-// Funções de Renderização e Utilidades
-function renderLaudosList(laudos) { if (!laudos || laudos.length === 0) { laudosList.innerHTML = '<p class="text-muted">Nenhum laudo cadastrado.</p>'; return; } laudosList.innerHTML = laudos.map(laudo => `<div class="col-lg-4 col-md-6"><div class="card h-100"><div class="card-body"><h5 class="card-title">${laudo.numero_processo || 'N/A'}</h5><p class="card-text"><strong>Reclamante:</strong> ${laudo.reclamante || 'N/A'}</p><p class="card-text"><small class="text-muted">Data: ${formatDate(laudo.data_laudo)}</small></p></div><div class="card-footer bg-transparent border-top-0 text-end"><button class="btn btn-sm btn-outline-primary" onclick="showFormView(${laudo.id})">Editar</button><button class="btn btn-sm btn-outline-success" onclick="exportToWord(${laudo.id})">Exportar</button><button class="btn btn-sm btn-outline-danger" onclick="deleteLaudo(${laudo.id})">Excluir</button></div></div></div>`).join(''); }
+function renderLaudosList(laudos) { if (!laudos || laudos.length === 0) { laudosList.innerHTML = '<p class="text-muted">Nenhum laudo cadastrado.</p>'; return; } laudosList.innerHTML = laudos.map(laudo => `<div class="col-lg-4 col-md-6"><div class="card h-100"><div class="card-body"><h5 class="card-title">${laudo.numero_processo || 'N/A'}</h5><p class="card-text"><strong>Reclamante:</strong> ${laudo.reclamante || 'N/A'}</p><p class="card-text"><small class="text-muted">Data: ${formatDate(laudo.data_laudo)}</small></p></div><div class="card-footer bg-transparent border-top-0 text-end"><button class="btn btn-sm btn-outline-primary" onclick="showFormView(${laudo.id})">Editar</button><button class="btn btn-sm btn-outline-danger" onclick="deleteLaudo(${laudo.id})">Excluir</button></div></div></div>`).join(''); }
 const renderQuesitos = (container, quesitos) => { container.innerHTML = quesitos.map((q, index) => `<div class="quesito-item" data-index="${index}"><span class="number">${index + 1}.</span><div class="fields flex-grow-1"><textarea class="form-control mb-2 quesito-pergunta" rows="2" placeholder="Digite a pergunta">${q.pergunta}</textarea><textarea class="form-control quesito-resposta" rows="3" placeholder="Digite a resposta">${q.resposta}</textarea></div><button type="button" class="btn btn-danger btn-sm remove-quesito-btn align-self-start">&times;</button></div>`).join(''); };
 
 function populateForm(data) {
@@ -205,10 +310,10 @@ function populateForm(data) {
         selectTipoExame.value = data.tipo_exame_especifico;
         selectTipoExame.dispatchEvent(new Event('change'));
         setTimeout(() => {
-            if (examesEspecificos[data.tipo_exame_especifico]) {
-                examesEspecificos[data.tipo_exame_especifico].forEach(exame => {
-                    if (data[exame.id] && document.getElementById(exame.id)) {
-                        document.getElementById(exame.id).value = data[exame.id];
+            if (DADOS_DOENCAS[data.tipo_exame_especifico]) {
+                DADOS_DOENCAS[data.tipo_exame_especifico].testes.forEach(exame => {
+                    if (data[exame.test_id] && document.getElementById(exame.test_id)) {
+                        document.getElementById(exame.test_id).value = data[exame.test_id];
                     }
                 });
             }
@@ -236,4 +341,3 @@ function resetForm() {
 
 function formatDate(dateString) { if (!dateString) return 'N/A'; const date = new Date(dateString); const offset = date.getTimezoneOffset() * 60000; return new Date(date.getTime() + offset).toLocaleDateString('pt-BR'); }
 function showNotification(message, type) { const existing = document.querySelectorAll('.notification'); existing.forEach(n => n.remove()); const notification = document.createElement('div'); notification.className = `notification ${type}`; notification.textContent = message; document.body.appendChild(notification); setTimeout(() => notification.remove(), 4000); }
-
