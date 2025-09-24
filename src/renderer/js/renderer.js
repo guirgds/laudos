@@ -1,4 +1,4 @@
-// renderer.js - VERSÃO AJUSTADA (carregamento robusto do IMask)
+// src/renderer/js/renderer.js
 
 // --- VARIÁVEIS GLOBAIS ---
 let editingId = null;
@@ -26,7 +26,6 @@ function showNotification(message, type) {
 }
 
 // --- CARREGAMENTO ROBUSTO DO IMASK ---
-// tenta carregar primeiro local (js/imask.min.js) e se falhar tenta CDN
 function loadIMaskOnce() {
     return new Promise((resolve, reject) => {
         if (window.IMask) {
@@ -42,7 +41,6 @@ function loadIMaskOnce() {
             const s = document.createElement('script');
             s.src = src;
             s.onload = () => {
-                // pequeno delay para garantir que a lib registre a variável global
                 setTimeout(() => {
                     if (window.IMask) {
                         console.log('[IMask] carregado com sucesso de', src);
@@ -128,7 +126,6 @@ function attachDoencasModalHandlers() {
             testesFields.forEach(row => {
                 const label = row.querySelector('.new-teste-label').value;
                 const placeholder = row.querySelector('.new-teste-placeholder').value;
-                // Evita colisão incluindo o nome da doença no test_id
                 const test_id = (nomeDoenca + '_' + label).trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_{2,}/g, '_');
                 if (label && label.trim()) { novaDoenca.testes.push({ label, placeholder, test_id }); }
             });
@@ -159,7 +156,6 @@ async function loadDoencas() {
             showNotification("Não foi possível carregar os modelos de doenças.", "error");
         }
     } else {
-        // fallback: mantém DADOS_DOENCAS vazio sem prejudicar a aplicação
         DADOS_DOENCAS = DADOS_DOENCAS || {};
     }
 }
@@ -178,7 +174,7 @@ function populateDoencasDropdown() {
 
 // --- INICIALIZAÇÃO E EVENTOS PRINCIPAIS ---
 document.addEventListener('DOMContentLoaded', () => {
-    // atribui elementos globais (evita null se o DOM não existir ainda)
+    // atribui elementos globais
     listView = document.getElementById('list-view');
     formView = document.getElementById('form-view');
     loadingView = document.getElementById('loading-view');
@@ -195,10 +191,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const yearSpan = document.getElementById('year');
     if (yearSpan) yearSpan.textContent = new Date().getFullYear();
 
-    // inicializa handlers de modal/doencas
     attachDoencasModalHandlers();
 
-    // Carrega dados iniciais
     loadLaudos();
     loadDoencas();
 
@@ -222,45 +216,20 @@ document.addEventListener('DOMContentLoaded', () => {
         examesEspecificosContainer: document.getElementById('exames-especificos-container')
     };
 
-    // -------------------------
-    // Máscaras: tenta carregar IMask dinamicamente (local -> CDN fallback)
-    // -------------------------
     loadIMaskOnce().then((IMaskLib) => {
         try {
-            console.log('[renderer] aplicando máscaras IMask...');
-            if (inputs.processo && typeof IMaskLib !== 'undefined') {
-                IMaskLib(inputs.processo, { mask: '0000000-00.0000.0.00.0000' });
-            }
-            if (inputs.cpf && typeof IMaskLib !== 'undefined') {
-                IMaskLib(inputs.cpf, { mask: '000.000.000-00' });
-            }
-            if (inputs.valorHonorarios && typeof IMaskLib !== 'undefined') {
-                // máscara numérica para valores (mais robusta)
-                IMaskLib(inputs.valorHonorarios, {
-                    mask: Number,
-                    scale: 2,
-                    signed: false,
-                    thousandsSeparator: '.',
-                    radix: ',',
-                    mapToRadix: [','],
-                    padFractionalZeros: true,
-                    normalizeZeros: true,
-                    min: 0
-                });
-            }
+            if (inputs.processo && typeof IMaskLib !== 'undefined') IMaskLib(inputs.processo, { mask: '0000000-00.0000.0.00.0000' });
+            if (inputs.cpf && typeof IMaskLib !== 'undefined') IMaskLib(inputs.cpf, { mask: '000.000.000-00' });
+            if (inputs.valorHonorarios && typeof IMaskLib !== 'undefined') IMaskLib(inputs.valorHonorarios, { mask: Number, scale: 2, signed: false, thousandsSeparator: '.', radix: ',', mapToRadix: [','], padFractionalZeros: true, normalizeZeros: true, min: 0 });
         } catch (err) {
             console.error('[renderer] erro aplicando máscaras:', err);
             showNotification('Erro ao aplicar máscaras: ' + err.message, 'error');
         }
     }).catch(err => {
         console.error('[renderer] falha ao carregar IMask:', err);
-        showNotification('A biblioteca de máscaras não pôde ser carregada. Verifique o arquivo js/imask.min.js ou a conexão com a internet.', 'error');
-        // não interrompe a aplicação; continua sem máscaras
+        showNotification('A biblioteca de máscaras não pôde ser carregada.', 'error');
     });
 
-    // -------------------------
-    // Cálculo IMC / Idade
-    // -------------------------
     const calcularIMC = () => {
         if (!inputs.altura || !inputs.peso || !inputs.imc) return;
         const alturaStr = String(inputs.altura.value || '').replace(',', '.');
@@ -268,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let altura = parseFloat(alturaStr);
         let peso = parseFloat(pesoStr);
         if (isNaN(altura) || isNaN(peso) || altura <= 0 || peso <= 0) { inputs.imc.value = ''; return; }
-        const alturaMetros = altura > 3 ? altura / 100 : altura; // se digitou cm como 170 -> transforma em 1.70
+        const alturaMetros = altura > 3 ? altura / 100 : altura;
         const imc = peso / (alturaMetros * alturaMetros);
         let classificacao = '';
         if (imc < 18.5) classificacao = 'Abaixo do peso'; else if (imc < 25) classificacao = 'Peso normal'; else if (imc < 30) classificacao = 'Sobrepeso'; else if (imc < 35) classificacao = 'Obesidade Grau I'; else if (imc < 40) classificacao = 'Obesidade Grau II'; else classificacao = 'Obesidade Grau III';
@@ -292,9 +261,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputs.peso) inputs.peso.addEventListener('input', calcularIMC);
     if (inputs.altura) inputs.altura.addEventListener('input', calcularIMC);
 
-    // -------------------------
-    // selectTipoExame change => popula exames específicos
-    // -------------------------
     if (inputs.selectTipoExame) {
         inputs.selectTipoExame.addEventListener('change', (e) => {
             const selectedKey = e.target.value;
@@ -307,14 +273,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // -------------------------
-    // Fotos (render / select)
-    // -------------------------
     const renderPhotos = () => {
         if (inputs.photosPreviewContainer) {
             inputs.photosPreviewContainer.innerHTML = currentPhotoPaths.map((path, index) => {
-                // mantemos safe-file:// da sua versão original (se seu app usar protocolo custom, ok).
-                // caso não, experimente usar pathToFileURL no main/preload do electron ou usar renderer-safe path.
                 const safePath = `safe-file://${path.replaceAll('\\', '/')}`;
                 return `<div class="photo-thumbnail"><img src="${safePath}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`;
             }).join('');
@@ -327,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await window.electronAPI.selectPhotos();
                 if (result && result.success) { currentPhotoPaths.push(...result.paths); renderPhotos(); }
             } else {
-                showNotification('selectPhotos não disponível (preload).', 'error');
+                showNotification('selectPhotos não disponível.', 'error');
             }
         });
     }
@@ -340,9 +301,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // -------------------------
-    // Exames dinâmicos
-    // -------------------------
     if (inputs.btnAddExame) {
         inputs.btnAddExame.addEventListener('click', () => {
             const newExame = document.createElement('div');
@@ -358,9 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // -------------------------
-    // Passado laboral dinâmico
-    // -------------------------
     if (inputs.btnAddPassadoLaboral) {
         inputs.btnAddPassadoLaboral.addEventListener('click', () => {
             const newEntry = document.createElement('div');
@@ -376,9 +331,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // -------------------------
-    // Quesitos dinamicos
-    // -------------------------
     if (inputs.quesitosContainer) {
         inputs.quesitosContainer.addEventListener('click', e => {
             const type = e.target.dataset.type;
@@ -399,7 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- FUNÇÕES GLOBAIS DE CONTROLE ---
-// (essas dependem dos elementos que já foram setados no DOMContentLoaded)
 function safeGet(id){ return document.getElementById(id); }
 const getQuesitosFromDOM = (container) => {
     if (!container) return [];
@@ -417,7 +368,6 @@ const getPassadoLaboralFromDOM = () => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Conecta botões globais (garante que existam)
     const btnNewGlobal = document.getElementById('btn-new');
     const btnListGlobal = document.getElementById('btn-list');
     const btnCancelGlobal = document.getElementById('btn-cancel');
@@ -457,7 +407,6 @@ async function loadLaudos() {
             if (result.success) renderLaudosList(result.data);
             else showNotification('Erro ao carregar: ' + result.error, 'error');
         } else {
-            // fallback: vazia
             renderLaudosList([]);
         }
     } catch (error) {
@@ -502,7 +451,6 @@ async function saveOrUpdateLaudo() {
     const formData = {};
     for (let [key, value] of formDataObj.entries()) formData[key] = (typeof value === 'string') ? value.trim() : value;
 
-    // normaliza altura/peso (vírgula -> ponto)
     if (formData.altura) formData.altura = String(formData.altura).replace(',', '.');
     if (formData.peso) formData.peso = String(formData.peso).replace(',', '.');
 
@@ -521,8 +469,7 @@ async function saveOrUpdateLaudo() {
             if (result.success) { showNotification('Laudo salvo!', 'success'); editingId = null; loadLaudos(); }
             else { showNotification('Erro ao salvar: ' + result.error, 'error'); showFormView(editingId); }
         } else {
-            // fallback: apenas simula sucesso
-            console.warn('saveLaudo não disponível no preload; simulando salvamento local.');
+            console.warn('saveLaudo não disponível; simulando salvamento.');
             showNotification('Laudo (simulado) salvo!', 'success');
             editingId = null;
             loadLaudos();
@@ -560,7 +507,6 @@ function populateForm(data) {
     }
 
     currentPhotoPaths = data.fotos_paths ? JSON.parse(data.fotos_paths) : [];
-    // render fotos
     const container = document.getElementById('photos-preview-container');
     if (container) {
         container.innerHTML = currentPhotoPaths.map((path, index) => {

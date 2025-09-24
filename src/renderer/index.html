@@ -58,7 +58,28 @@
             <div class="card card-body"><h5 class="card-title">Anamnese e Histórico</h5><div class="row g-3"><div class="col-12"><label for="queixa_principal" class="form-label">Queixa Principal:</label><textarea class="form-control" id="queixa_principal" name="queixa_principal" rows="3"></textarea></div><div class="col-12"><label for="historia_molestia" class="form-label">História Pregressa da Moléstia:</label><textarea class="form-control" id="historia_molestia" name="historia_molestia" rows="8"></textarea></div><div class="col-12"><label class="form-label">Passado Laboral (CTPS):</label><div id="passado-laboral-list" class="dynamic-list-container"></div><button type="button" id="btn-add-passado-laboral" class="btn btn-outline-secondary btn-sm mt-2">Adicionar Experiência</button></div></div></div>
           </div>
           <div class="tab-pane fade" id="tab-conclusao" role="tabpanel">
-            <div class="card card-body mb-3"><h5 class="card-title">Análise Técnica</h5><div class="row g-3"><div class="col-12"><label class="form-label">Exames Complementares:</label><div id="exames-list-container" class="dynamic-list-container"></div><button type="button" id="btn-add-exame" class="btn btn-outline-secondary btn-sm mt-2">Adicionar Exame</button></div><div class="col-12"><label for="discussao" class="form-label">Considerações Médicas / Discussão:</label><textarea class="form-control" id="discussao" name="discussao" rows="8"></textarea></div><div class="col-12"><label for="conclusao" class="form-label">Conclusão:</label><textarea class="form-control" id="conclusao" name="conclusao" rows="5"></textarea></div></div></div>
+            <div class="card card-body mb-3">
+              <h5 class="card-title">Análise Técnica</h5>
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Exames Complementares:</label>
+                  <div id="exames-list-container" class="dynamic-list-container"></div>
+                  <button type="button" id="btn-add-exame" class="btn btn-outline-secondary btn-sm mt-2">Adicionar Exame</button>
+                </div>
+                <div class="col-12">
+                  <label for="analise_pericial" class="form-label">8.1 - Análise Médico-Pericial:</label>
+                  <textarea class="form-control" id="analise_pericial" name="analise_pericial" rows="8" placeholder="Desenvolva aqui seu raciocínio e ponto de vista sobre o caso..."></textarea>
+                </div>
+                <div class="col-12">
+                  <label for="referencial_tecnico" class="form-label">8.2 - Referencial Técnico Utilizado:</label>
+                  <textarea class="form-control" id="referencial_tecnico" name="referencial_tecnico" rows="8" placeholder="Cole aqui o texto do boletim, diretriz ou artigo que embasa sua análise..."></textarea>
+                </div>
+                <div class="col-12">
+                  <label for="conclusao" class="form-label">Conclusão:</label>
+                  <textarea class="form-control" id="conclusao" name="conclusao" rows="5"></textarea>
+                </div>
+              </div>
+            </div>
             <div class="card card-body"><h5 class="card-title">Respostas aos Quesitos</h5><div id="quesitos-group-container"></div></div>
           </div>
           <div class="tab-pane fade" id="tab-finalizacao" role="tabpanel">
