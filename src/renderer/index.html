@@ -62,42 +62,29 @@
             <div class="card card-body"><h5 class="card-title">Respostas aos Quesitos</h5><div id="quesitos-group-container"></div></div>
           </div>
           <div class="tab-pane fade" id="tab-finalizacao" role="tabpanel">
-             <div class="card card-body mb-3"><h5 class="card-title">Dados do Perito e Honorários</h5><div class="row g-3"><div class="col-md-6"><label for="perito" class="form-label">Perito:</label><input type="text" class="form-control" id="perito" name="perito" /></div><div class="col-md-6"><label for="crm" class="form-label">CRM:</label><input type="text" class="form-control" id="crm" name="crm" /></div><div class="col-md-6"><label for="valor_honorarios" class="form-label">Valor de Honorários (R$):</label><input type="text" class="form-control" id="valor_honorarios" name="valor_honorarios" /></div><div class="col-md-6"><label for="valor_por_extenso" class="form-label">Valor por Extenso:</label><input type="text" class="form-control" id="valor_por_extenso" name="valor_por_extenso" /></div></div></div>
+             <div class="card card-body mb-3"><h5 class="card-title">Dados do Perito e Honorários</h5><div class="row g-3"><div class="col-md-6"><label for="perito" class="form-label">Perito:</label><input type="text" class="form-control" id="perito" name="perito" /></div><div class="col-md-6"><label for="crm" class="form-label">CRM:</label><input type="text" class="form-control" id="crm" name="crm" /></div><div class="col-md-6"><label for="valor_honorarios" class="form-label">Valor de Honorários (R$):</label><input type="text" class="form-control" id="valor_honorarios" name="valor_honorarios" /></div><div class="col-md-6"><label for="valor_por_extenso" class="form-label">Valor por Extenso:</label><input type="text" class="form-control" id="valor_por_extenso" name="valor_por_extenso" readonly /></div></div></div>
             <div class="card card-body"><h5 class="card-title">Datas</h5><div class="row g-3"><div class="col-md-4"><label for="data_pericia" class="form-label">Data da Perícia:</label><input type="date" class="form-control" id="data_pericia" name="data_pericia" /></div><div class="col-md-4"><label for="hora_pericia" class="form-label">Hora da Perícia:</label><input type="time" class="form-control" id="hora_pericia" name="hora_pericia" /></div><div class="col-md-4"><label for="data_laudo" class="form-label">Data do Laudo:</label><input type="date" class="form-control" id="data_laudo" name="data_laudo" /></div></div></div>
           </div>
-          
           <div class="form-actions mt-4 text-end">
             <button type="button" id="btn-cancel" class="btn btn-secondary me-2">Cancelar</button>
             <button type="submit" class="btn btn-primary">Salvar Laudo</button>
           </div>
         </form>
       </div>
-
       <div id="loading-view" class="d-none justify-content-center align-items-center" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(33, 37, 41, 0.8); z-index: 1100;">
         <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
       </div>
     </main>
-
     <footer class="app-footer p-3 text-center border-top mt-auto">
       <p class="m-0">Sistema de Laudos Médicos &copy; <span id="year"></span></p>
     </footer>
-
-    <div class="modal fade" id="modal-doencas" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Gerenciar Doenças e Testes</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body" id="doencas-management-content">
-               </div>
-        </div>
-      </div>
-    </div>
+    <div class="modal fade" id="modal-doencas" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Gerenciar Doenças e Testes</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" id="doencas-management-content"></div></div></div></div>
   </div>
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
   <script src="js/imask.min.js"></script>
+  
   <script src="js/renderer.js"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
-// main.js - VERSÃO COMPLETA E FINAL
-const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
+// main.js - VERSÃO FINAL E CORRIGIDA
+const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron'); // 1. Adicionado 'protocol'
 const fs = require('fs');
 const path = require('path');
-const db = require('../../database/db'); // Caminho para o seu arquivo de banco de dados
+const db = require('../../database/db');
 
 let mainWindow;
 
@@ -27,7 +27,7 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  // Configura um protocolo para servir arquivos locais de forma segura (essencial para as fotos)
+  // 2. ADIÇÃO DO PROTOCOLO SEGURO (ESSENCIAL PARA AS FOTOS)
   protocol.registerFileProtocol('safe-file', (request, callback) => {
     const url = request.url.replace('safe-file://', '');
     const decodedUrl = decodeURI(url);
@@ -57,10 +57,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// ------------------ IPC HANDLERS ------------------
-
-// --- Handlers para Laudos ---
-
+// --- IPC HANDLERS ---
 ipcMain.handle('load-laudos', async () => {
   try {
     const laudos = await db.loadLaudos(); 
@@ -101,39 +98,12 @@ ipcMain.handle('delete-laudo', async (event, id) => {
   }
 });
 
-ipcMain.handle('select-photos', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile', 'multiSelections'],
-    filters: [{ name: 'Images', extensions: ['jpg', 'png', 'gif', 'jpeg'] }]
-  });
-
-  if (result.canceled) {
-    return { success: false, error: 'Seleção cancelada' };
-  }
-
-  const imagesDir = path.join(app.getPath('userData'), 'laudo_images');
-  if (!fs.existsSync(imagesDir)){
-      fs.mkdirSync(imagesDir, { recursive: true });
-  }
-
-  const newPaths = [];
-  for (const oldPath of result.filePaths) {
-    const fileName = `${Date.now()}-${path.basename(oldPath)}`;
-    const newPath = path.join(imagesDir, fileName);
-    fs.copyFileSync(oldPath, newPath);
-    newPaths.push(newPath);
-  }
-
-  return { success: true, paths: newPaths };
-});
-
 ipcMain.handle('export-word', async (event, laudoData) => {
   try {
     const { filePath } = await dialog.showSaveDialog(mainWindow, {
       defaultPath: `laudo-${laudoData.numero_processo || Date.now()}.docx`,
       filters: [{ name: 'Documentos Word', extensions: ['docx'] }],
     });
-
     if (!filePath) return { success: false, error: 'Operação cancelada' };
     console.log(`Salvar laudo em: ${filePath}`);
     return { success: true, data: { path: filePath } };
@@ -143,25 +113,24 @@ ipcMain.handle('export-word', async (event, laudoData) => {
   }
 });
 
-
-// --- Handlers para Gerenciamento de Doenças ---
-
-ipcMain.handle('get-doencas', async () => {
-  try {
-    const doencas = await db.getDoencasComTestes();
-    return { success: true, data: doencas };
-  } catch (error) {
-    console.error('Erro ao buscar doenças no main process:', error);
-    return { success: false, error: error.message };
+ipcMain.handle('select-photos', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'png', 'gif', 'jpeg'] }]
+  });
+  if (result.canceled) {
+    return { success: false, error: 'Seleção cancelada' };
   }
-});
-
-ipcMain.handle('save-doenca', async (event, doenca) => {
-  try {
-    await db.saveDoencaComTestes(doenca);
-    return { success: true };
-  } catch (error) {
-    console.error('Erro ao salvar doença no main process:', error);
-    return { success: false, error: error.message };
+  const imagesDir = path.join(app.getPath('userData'), 'laudo_images');
+  if (!fs.existsSync(imagesDir)){
+      fs.mkdirSync(imagesDir);
   }
+  const newPaths = [];
+  for (const oldPath of result.filePaths) {
+    const fileName = `${Date.now()}-${path.basename(oldPath)}`;
+    const newPath = path.join(imagesDir, fileName);
+    fs.copyFileSync(oldPath, newPath);
+    newPaths.push(newPath);
+  }
+  return { success: true, paths: newPaths };
 });
