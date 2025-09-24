@@ -37,7 +37,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return ipcRenderer.invoke("export-word", laudoData);
   },
 
-  // --- NOVAS FUNÇÕES PARA GERENCIAR DOENÇAS ---
+  // --- FUNÇÕES PARA GERENCIAR DOENÇAS ATUALIZADAS ---
   getDoencas: () => ipcRenderer.invoke('get-doencas'),
-  saveDoenca: (doenca) => ipcRenderer.invoke('save-doenca', doenca)
+  saveDoenca: (doenca) => ipcRenderer.invoke('save-doenca', doenca),
+  // --- NOVAS FUNÇÕES ADICIONADAS AQUI ---
+  deleteDoenca: (id) => ipcRenderer.invoke('delete-doenca', id),
+  updateDoenca: (doencaData) => ipcRenderer.invoke('update-doenca', doencaData)
 });

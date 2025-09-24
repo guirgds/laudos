@@ -74,12 +74,10 @@ function initDatabase() {
   return new Promise((resolve, reject) => {
     try {
       // Lógica CORRIGIDA para determinar o caminho do banco de dados
-      // Em desenvolvimento, o caminho será relativo à raiz do projeto.
-      // Quando empacotado, será relativo à pasta de recursos do app.
       const isDev = process.mainModule.filename.indexOf('app.asar') === -1;
       const dbBaseDir = isDev
-        ? path.join(__dirname, '..') // Em dev, volta para a raiz do projeto a partir de /database
-        : path.dirname(app.getPath('exe')); // Em produção, pega o diretório do executável
+        ? path.join(__dirname, '..') 
+        : path.dirname(app.getPath('exe'));
 
       const dbDir = path.join(dbBaseDir, 'database', 'data');
       const dbPath = path.join(dbDir, 'laudos.db');
@@ -169,12 +167,40 @@ async function saveDoencaComTestes(doenca) {
   }
 }
 
+// --- FUNÇÕES DE UPDATE E DELETE DE DOENÇAS ADICIONADAS AQUI ---
+function deleteDoenca(id) {
+    return runAsync(db, `DELETE FROM doencas WHERE id = ?`, [id]);
+}
+
+async function updateDoenca(doencaData) {
+    const { id, nome, testes } = doencaData;
+    await runAsync(db, 'BEGIN TRANSACTION;');
+    try {
+        await runAsync(db, 'UPDATE doencas SET nome = ? WHERE id = ?', [nome, id]);
+        await runAsync(db, 'DELETE FROM testes WHERE doenca_id = ?', [id]);
+        if (testes && testes.length > 0) {
+            for (const teste of testes) {
+                const test_id = (nome + '_' + teste.label).trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_{2,}/g, '_');
+                await runAsync(db, 'INSERT INTO testes (doenca_id, label, placeholder, test_id) VALUES (?, ?, ?, ?)', [id, teste.label, teste.placeholder, test_id]);
+            }
+        }
+        await runAsync(db, 'COMMIT;');
+        return { updated: id };
+    } catch (error) {
+        await runAsync(db, 'ROLLBACK;');
+        throw error;
+    }
+}
+
 module.exports = {
   initDatabase,
   saveLaudo,
   loadLaudos,
   getLaudo,
   deleteLaudo,
+  // --- EXPORTS ADICIONADAS AQUI ---
+  deleteDoenca,
+  updateDoenca,
   getDoencasComTestes,
   saveDoencaComTestes
 };

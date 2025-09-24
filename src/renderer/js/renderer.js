@@ -69,29 +69,69 @@ function setupQuesitosUI() {
     container.innerHTML = quesitoTemplate('juizo', 'Quesitos do Juízo');
 }
 
-// --- LÓGICA DE GERENCIAMENTO DE DOENÇAS ---
+// --- LÓGICA DE GERENCIAMENTO DE DOENÇAS (SEÇÃO MODIFICADA) ---
 const renderDoencasManagement = () => {
     if (!doencasManagementContent) return;
+    
+    const existingDoencasHtml = Object.keys(DADOS_DOENCAS).map(nome => {
+        const doenca = DADOS_DOENCAS[nome];
+        const doencaId = doenca.id;
+        const testesHtml = doenca.testes.map(teste => `
+            <div class="row g-2 mb-2 align-items-center teste-row">
+                <div class="col-md-5"><input type="text" class="form-control form-control-sm teste-label" value="${teste.label}" placeholder="Nome do Teste" required></div>
+                <div class="col-md-5"><input type="text" class="form-control form-control-sm teste-placeholder" value="${teste.placeholder || ''}" placeholder="Texto de Exemplo"></div>
+                <div class="col-md-2 text-end"><button type="button" class="btn btn-sm btn-outline-danger remove-teste-field">Remover</button></div>
+            </div>
+        `).join('');
+
+        return `
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="heading-${doencaId}">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${doencaId}">
+                    ${nome}
+                </button>
+            </h2>
+            <div id="collapse-${doencaId}" class="accordion-collapse collapse" data-bs-parent="#existing-doencas-accordion">
+                <div class="accordion-body">
+                    <div data-doenca-id="${doencaId}" class="edit-doenca-form">
+                        <div class="mb-3"><label class="form-label">Nome da Doença:</label><input type="text" class="form-control form-control-sm doenca-name-input" value="${nome}" required></div>
+                        <h6>Testes:</h6>
+                        <div class="testes-container">${testesHtml}</div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary add-teste-field-edit mt-2">Adicionar Teste</button>
+                        <hr>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-sm btn-danger me-2 delete-doenca-btn">Excluir Doença</button>
+                            <button type="button" class="btn btn-sm btn-primary save-doenca-changes-btn">Salvar Alterações</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+
     doencasManagementContent.innerHTML = `
+        <div class="mb-4">
+            <h4>Doenças Cadastradas</h4>
+            <div class="accordion" id="existing-doencas-accordion">
+                ${existingDoencasHtml || '<p class="text-muted">Nenhuma doença cadastrada.</p>'}
+            </div>
+        </div>
+        <hr>
         <h4>Adicionar Nova Doença</h4>
         <form id="form-add-doenca">
-            <div class="mb-3">
-                <label for="new-doenca-name" class="form-label">Nome da Doença (Ex: PAIR, LER/DORT):</label>
-                <input type="text" id="new-doenca-name" class="form-control" required>
-            </div>
-            <h5>Testes Específicos para esta Doença</h5>
+            <div class="mb-3"><label for="new-doenca-name" class="form-label">Nome da Doença:</label><input type="text" id="new-doenca-name" class="form-control" required></div>
+            <h6>Testes Específicos</h6>
             <div id="new-testes-container" class="mb-3"></div>
             <button type="button" id="btn-add-teste-field" class="btn btn-outline-secondary btn-sm">Adicionar Campo de Teste</button>
-            <hr>
-            <div class="text-end">
-                <button type="submit" class="btn btn-primary">Salvar Nova Doença</button>
-            </div>
+            <div class="text-end mt-3"><button type="submit" class="btn btn-primary">Salvar Nova Doença</button></div>
         </form>
     `;
 };
 
 function attachDoencasModalHandlers() {
     if (!btnManageDoencas || !modalDoencas) return;
+
     btnManageDoencas.addEventListener('click', () => {
         renderDoencasManagement();
         modalDoencas.show();
@@ -99,464 +139,503 @@ function attachDoencasModalHandlers() {
 
     if (!modalDoencasElement) return;
 
-    modalDoencasElement.addEventListener('click', (e) => {
-        if (e.target.id === 'btn-add-teste-field') {
-            const container = document.getElementById('new-testes-container');
-            const newTesteRow = document.createElement('div');
-            newTesteRow.className = 'row g-2 mb-2 align-items-center';
-            newTesteRow.innerHTML = `
-                <div class="col-md-5"><input type="text" class="form-control form-control-sm new-teste-label" placeholder="Nome do Teste (ex: Otoscopia)" required></div>
-                <div class="col-md-5"><input type="text" class="form-control form-control-sm new-teste-placeholder" placeholder="Texto de Exemplo (placeholder)"></div>
-                <div class="col-md-2 text-end"><button type="button" class="btn btn-sm btn-danger remove-teste-field">Remover</button></div>
+    modalDoencasElement.addEventListener('click', async (e) => {
+        const addTesteField = (container) => {
+            const newRow = document.createElement('div');
+            newRow.className = 'row g-2 mb-2 align-items-center teste-row';
+            newRow.innerHTML = `
+                <div class="col-md-5"><input type="text" class="form-control form-control-sm teste-label" placeholder="Nome do Teste" required></div>
+                <div class="col-md-5"><input type="text" class="form-control form-control-sm teste-placeholder" placeholder="Texto de Exemplo"></div>
+                <div class="col-md-2 text-end"><button type="button" class="btn btn-sm btn-outline-danger remove-teste-field">Remover</button></div>
             `;
-            container.appendChild(newTesteRow);
+            container.appendChild(newRow);
+            newRow.querySelector('.teste-label').focus();
+        };
+
+        if (e.target.id === 'btn-add-teste-field') {
+            addTesteField(document.getElementById('new-testes-container'));
+        }
+        if (e.target.classList.contains('add-teste-field-edit')) {
+            addTesteField(e.target.previousElementSibling);
         }
         if (e.target.classList.contains('remove-teste-field')) {
-            e.target.closest('.row').remove();
+            e.target.closest('.teste-row').remove();
+        }
+
+        if (e.target.classList.contains('save-doenca-changes-btn')) {
+            const form = e.target.closest('.edit-doenca-form');
+            const data = {
+                id: form.dataset.doencaId,
+                nome: form.querySelector('.doenca-name-input').value.trim(),
+                testes: Array.from(form.querySelectorAll('.testes-container .teste-row')).map(row => ({
+                    label: row.querySelector('.teste-label').value.trim(),
+                    placeholder: row.querySelector('.teste-placeholder').value.trim()
+                })).filter(t => t.label)
+            };
+            if (!data.nome) return alert('O nome da doença é obrigatório.');
+            
+            const result = await window.electronAPI.updateDoenca(data);
+            if (result.success) {
+                showNotification('Doença atualizada!', 'success');
+                modalDoencas.hide();
+                await loadDoencas();
+            } else {
+                alert('Erro ao atualizar: ' + result.error);
+            }
+        }
+        
+        if (e.target.classList.contains('delete-doenca-btn')) {
+            if (!confirm('Tem certeza que deseja excluir esta doença e todos os seus testes?')) return;
+            const doencaId = e.target.closest('.edit-doenca-form').dataset.doencaId;
+            const result = await window.electronAPI.deleteDoenca(doencaId);
+            if (result.success) {
+                showNotification('Doença excluída!', 'success');
+                modalDoencas.hide();
+                await loadDoencas();
+            } else {
+                alert('Erro ao excluir: ' + result.error);
+            }
         }
     });
 
     modalDoencasElement.addEventListener('submit', async (e) => {
         if (e.target.id === 'form-add-doenca') {
             e.preventDefault();
-            const nomeDoenca = document.getElementById('new-doenca-name').value;
-            if (!nomeDoenca || !nomeDoenca.trim()) { alert('O nome da doença é obrigatório.'); return; }
-            const testesFields = document.querySelectorAll('#new-testes-container .row');
-            const novaDoenca = { nome: nomeDoenca, testes: [] };
-            testesFields.forEach(row => {
-                const label = row.querySelector('.new-teste-label').value;
-                const placeholder = row.querySelector('.new-teste-placeholder').value;
-                const test_id = (nomeDoenca + '_' + label).trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_{2,}/g, '_');
-                if (label && label.trim()) { novaDoenca.testes.push({ label, placeholder, test_id }); }
-            });
-            if (window.electronAPI && typeof window.electronAPI.saveDoenca === 'function') {
-                const result = await window.electronAPI.saveDoenca(novaDoenca);
-                if (result.success) {
-                    alert('Doença salva com sucesso!');
-                    modalDoencas.hide();
-                    loadDoencas();
-                } else {
-                    alert('Erro ao salvar doença: ' + result.error);
-                }
+            const nome = document.getElementById('new-doenca-name').value.trim();
+            if (!nome) return alert('O nome da doença é obrigatório.');
+            
+            const data = {
+                nome: nome,
+                testes: Array.from(document.querySelectorAll('#new-testes-container .teste-row')).map(row => ({
+                    label: row.querySelector('.teste-label').value.trim(),
+                    placeholder: row.querySelector('.teste-placeholder').value.trim()
+                })).filter(t => t.label)
+            };
+            
+            const result = await window.electronAPI.saveDoenca(data);
+            if (result.success) {
+                showNotification('Doença salva!', 'success');
+                modalDoencas.hide();
+                await loadDoencas();
             } else {
-                alert('saveDoenca não disponível (apenas stub).');
+                alert('Erro ao salvar: ' + result.error);
             }
         }
     });
 }
 
-// --- LÓGICA DE CARREGAMENTO ---
+// --- LÓGICA DE CARREGAMENTO (MODIFICADA) ---
 async function loadDoencas() {
-    if (window.electronAPI && typeof window.electronAPI.getDoencas === 'function') {
-        const result = await window.electronAPI.getDoencas();
-        if (result.success) {
-            DADOS_DOENCAS = result.data;
-            populateDoencasDropdown();
-        } else {
-            showNotification("Não foi possível carregar os modelos de doenças.", "error");
-        }
+    const result = await window.electronAPI.getDoencas();
+    if (result.success) {
+        DADOS_DOENCAS = result.data;
+        populateDoencasDropdown();
     } else {
-        DADOS_DOENCAS = DADOS_DOENCAS || {};
+        showNotification("Não foi possível carregar os modelos de doenças.", "error");
     }
 }
 
 function populateDoencasDropdown() {
     const select = document.getElementById('tipo-exame-especifico');
     if (!select) return;
+    const currentValue = select.value;
     select.innerHTML = '<option selected value="">Nenhum (Geral)</option>';
-    for (const nomeDoenca in DADOS_DOENCAS) {
+    Object.keys(DADOS_DOENCAS).sort().forEach(nome => {
         const option = document.createElement('option');
-        option.value = nomeDoenca;
-        option.textContent = nomeDoenca;
+        option.value = nome;
+        option.textContent = nome;
         select.appendChild(option);
-    }
+    });
+    select.value = currentValue;
 }
+
+// --- O RESTANTE DO ARQUIVO PERMANECE IGUAL ---
 
 // --- INICIALIZAÇÃO E EVENTOS PRINCIPAIS ---
 document.addEventListener('DOMContentLoaded', () => {
-    // atribui elementos globais
-    listView = document.getElementById('list-view');
-    formView = document.getElementById('form-view');
-    loadingView = document.getElementById('loading-view');
-    laudosList = document.getElementById('laudos-list');
-    btnNew = document.getElementById('btn-new');
-    btnList = document.getElementById('btn-list');
-    btnCancel = document.getElementById('btn-cancel');
-    laudoForm = document.getElementById('laudo-form');
-    btnManageDoencas = document.getElementById('btn-manage-doencas');
-    modalDoencasElement = document.getElementById('modal-doencas');
-    modalDoencas = modalDoencasElement ? new bootstrap.Modal(modalDoencasElement) : null;
-    doencasManagementContent = document.getElementById('doencas-management-content');
+    // atribui elementos globais
+    listView = document.getElementById('list-view');
+    formView = document.getElementById('form-view');
+    loadingView = document.getElementById('loading-view');
+    laudosList = document.getElementById('laudos-list');
+    btnNew = document.getElementById('btn-new');
+    btnList = document.getElementById('btn-list');
+    btnCancel = document.getElementById('btn-cancel');
+    laudoForm = document.getElementById('laudo-form');
+    btnManageDoencas = document.getElementById('btn-manage-doencas');
+    modalDoencasElement = document.getElementById('modal-doencas');
+    modalDoencas = modalDoencasElement ? new bootstrap.Modal(modalDoencasElement) : null;
+    doencasManagementContent = document.getElementById('doencas-management-content');
 
-    const yearSpan = document.getElementById('year');
-    if (yearSpan) yearSpan.textContent = new Date().getFullYear();
+    const yearSpan = document.getElementById('year');
+    if (yearSpan) yearSpan.textContent = new Date().getFullYear();
 
-    attachDoencasModalHandlers();
+    attachDoencasModalHandlers();
 
-    loadLaudos();
-    loadDoencas();
+    loadLaudos();
+    loadDoencas();
 
-    const inputs = {
-        processo: document.getElementById('numero_processo'),
-        cpf: document.getElementById('cpf'),
-        valorHonorarios: document.getElementById('valor_honorarios'),
-        dataNascimento: document.getElementById('data_nascimento'),
-        idade: document.getElementById('idade'),
-        peso: document.getElementById('peso'),
-        altura: document.getElementById('altura'),
-        imc: document.getElementById('imc'),
-        btnAddPhoto: document.getElementById('btn-add-photo'),
-        photosPreviewContainer: document.getElementById('photos-preview-container'),
-        quesitosContainer: document.getElementById('quesitos-group-container'),
-        examesListContainer: document.getElementById('exames-list-container'),
-        btnAddExame: document.getElementById('btn-add-exame'),
-        passadoLaboralList: document.getElementById('passado-laboral-list'),
-        btnAddPassadoLaboral: document.getElementById('btn-add-passado-laboral'),
-        selectTipoExame: document.getElementById('tipo-exame-especifico'),
-        examesEspecificosContainer: document.getElementById('exames-especificos-container')
-    };
+    const inputs = {
+        processo: document.getElementById('numero_processo'),
+        cpf: document.getElementById('cpf'),
+        valorHonorarios: document.getElementById('valor_honorarios'),
+        dataNascimento: document.getElementById('data_nascimento'),
+        idade: document.getElementById('idade'),
+        peso: document.getElementById('peso'),
+        altura: document.getElementById('altura'),
+        imc: document.getElementById('imc'),
+        btnAddPhoto: document.getElementById('btn-add-photo'),
+        photosPreviewContainer: document.getElementById('photos-preview-container'),
+        quesitosContainer: document.getElementById('quesitos-group-container'),
+        examesListContainer: document.getElementById('exames-list-container'),
+        btnAddExame: document.getElementById('btn-add-exame'),
+        passadoLaboralList: document.getElementById('passado-laboral-list'),
+        btnAddPassadoLaboral: document.getElementById('btn-add-passado-laboral'),
+        selectTipoExame: document.getElementById('tipo-exame-especifico'),
+        examesEspecificosContainer: document.getElementById('exames-especificos-container')
+    };
 
-    loadIMaskOnce().then((IMaskLib) => {
-        try {
-            if (inputs.processo && typeof IMaskLib !== 'undefined') IMaskLib(inputs.processo, { mask: '0000000-00.0000.0.00.0000' });
-            if (inputs.cpf && typeof IMaskLib !== 'undefined') IMaskLib(inputs.cpf, { mask: '000.000.000-00' });
-            if (inputs.valorHonorarios && typeof IMaskLib !== 'undefined') IMaskLib(inputs.valorHonorarios, { mask: Number, scale: 2, signed: false, thousandsSeparator: '.', radix: ',', mapToRadix: [','], padFractionalZeros: true, normalizeZeros: true, min: 0 });
-        } catch (err) {
-            console.error('[renderer] erro aplicando máscaras:', err);
-            showNotification('Erro ao aplicar máscaras: ' + err.message, 'error');
-        }
-    }).catch(err => {
-        console.error('[renderer] falha ao carregar IMask:', err);
-        showNotification('A biblioteca de máscaras não pôde ser carregada.', 'error');
-    });
+    loadIMaskOnce().then((IMaskLib) => {
+        try {
+            if (inputs.processo && typeof IMaskLib !== 'undefined') IMaskLib(inputs.processo, { mask: '0000000-00.0000.0.00.0000' });
+            if (inputs.cpf && typeof IMaskLib !== 'undefined') IMaskLib(inputs.cpf, { mask: '000.000.000-00' });
+            if (inputs.valorHonorarios && typeof IMaskLib !== 'undefined') IMaskLib(inputs.valorHonorarios, { mask: Number, scale: 2, signed: false, thousandsSeparator: '.', radix: ',', mapToRadix: [','], padFractionalZeros: true, normalizeZeros: true, min: 0 });
+        } catch (err) {
+            console.error('[renderer] erro aplicando máscaras:', err);
+            showNotification('Erro ao aplicar máscaras: ' + err.message, 'error');
+        }
+    }).catch(err => {
+        console.error('[renderer] falha ao carregar IMask:', err);
+        showNotification('A biblioteca de máscaras não pôde ser carregada.', 'error');
+    });
 
-    const calcularIMC = () => {
-        if (!inputs.altura || !inputs.peso || !inputs.imc) return;
-        const alturaStr = String(inputs.altura.value || '').replace(',', '.');
-        const pesoStr = String(inputs.peso.value || '').replace(',', '.');
-        let altura = parseFloat(alturaStr);
-        let peso = parseFloat(pesoStr);
-        if (isNaN(altura) || isNaN(peso) || altura <= 0 || peso <= 0) { inputs.imc.value = ''; return; }
-        const alturaMetros = altura > 3 ? altura / 100 : altura;
-        const imc = peso / (alturaMetros * alturaMetros);
-        let classificacao = '';
-        if (imc < 18.5) classificacao = 'Abaixo do peso'; else if (imc < 25) classificacao = 'Peso normal'; else if (imc < 30) classificacao = 'Sobrepeso'; else if (imc < 35) classificacao = 'Obesidade Grau I'; else if (imc < 40) classificacao = 'Obesidade Grau II'; else classificacao = 'Obesidade Grau III';
-        inputs.imc.value = `${imc.toFixed(2)} (${classificacao})`;
-    };
+    const calcularIMC = () => {
+        if (!inputs.altura || !inputs.peso || !inputs.imc) return;
+        const alturaStr = String(inputs.altura.value || '').replace(',', '.');
+        const pesoStr = String(inputs.peso.value || '').replace(',', '.');
+        let altura = parseFloat(alturaStr);
+        let peso = parseFloat(pesoStr);
+        if (isNaN(altura) || isNaN(peso) || altura <= 0 || peso <= 0) { inputs.imc.value = ''; return; }
+        const alturaMetros = altura > 3 ? altura / 100 : altura;
+        const imc = peso / (alturaMetros * alturaMetros);
+        let classificacao = '';
+        if (imc < 18.5) classificacao = 'Abaixo do peso'; else if (imc < 25) classificacao = 'Peso normal'; else if (imc < 30) classificacao = 'Sobrepeso'; else if (imc < 35) classificacao = 'Obesidade Grau I'; else if (imc < 40) classificacao = 'Obesidade Grau II'; else classificacao = 'Obesidade Grau III';
+        inputs.imc.value = `${imc.toFixed(2)} (${classificacao})`;
+    };
 
-    const calcularIdade = () => {
-        if (!inputs.dataNascimento || !inputs.idade) return;
-        const dataValue = inputs.dataNascimento.value;
-        if (!dataValue) { inputs.idade.value = ''; return; }
-        const hoje = new Date();
-        const nascimento = new Date(dataValue);
-        if (nascimento > hoje || isNaN(nascimento.getTime())) { inputs.idade.value = 'Data inválida'; return; }
-        let idade = hoje.getFullYear() - nascimento.getFullYear();
-        const m = hoje.getMonth() - nascimento.getMonth();
-        if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
-        inputs.idade.value = idade;
-    };
+    const calcularIdade = () => {
+        if (!inputs.dataNascimento || !inputs.idade) return;
+        const dataValue = inputs.dataNascimento.value;
+        if (!dataValue) { inputs.idade.value = ''; return; }
+        const hoje = new Date();
+        const nascimento = new Date(dataValue);
+        if (nascimento > hoje || isNaN(nascimento.getTime())) { inputs.idade.value = 'Data inválida'; return; }
+        let idade = hoje.getFullYear() - nascimento.getFullYear();
+        const m = hoje.getMonth() - nascimento.getMonth();
+        if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
+        inputs.idade.value = idade;
+    };
 
-    if (inputs.dataNascimento) { inputs.dataNascimento.max = new Date().toISOString().split("T")[0]; inputs.dataNascimento.addEventListener('change', calcularIdade); }
-    if (inputs.peso) inputs.peso.addEventListener('input', calcularIMC);
-    if (inputs.altura) inputs.altura.addEventListener('input', calcularIMC);
+    if (inputs.dataNascimento) { inputs.dataNascimento.max = new Date().toISOString().split("T")[0]; inputs.dataNascimento.addEventListener('change', calcularIdade); }
+    if (inputs.peso) inputs.peso.addEventListener('input', calcularIMC);
+    if (inputs.altura) inputs.altura.addEventListener('input', calcularIMC);
 
-    if (inputs.selectTipoExame) {
-        inputs.selectTipoExame.addEventListener('change', (e) => {
-            const selectedKey = e.target.value;
-            if (!inputs.examesEspecificosContainer) return;
-            inputs.examesEspecificosContainer.innerHTML = '';
-            if (selectedKey && DADOS_DOENCAS[selectedKey]) {
-                const examesHtml = DADOS_DOENCAS[selectedKey].testes.map(exame => `<div class="col-md-6"><label for="${exame.test_id}" class="form-label">${exame.label}</label><input type="text" class="form-control form-control-sm" id="${exame.test_id}" name="${exame.test_id}" placeholder="${exame.placeholder || ''}"></div>`).join('');
-                inputs.examesEspecificosContainer.innerHTML = examesHtml;
-            }
-        });
-    }
+    if (inputs.selectTipoExame) {
+        inputs.selectTipoExame.addEventListener('change', (e) => {
+            const selectedKey = e.target.value;
+            if (!inputs.examesEspecificosContainer) return;
+            inputs.examesEspecificosContainer.innerHTML = '';
+            if (selectedKey && DADOS_DOENCAS[selectedKey]) {
+                const examesHtml = DADOS_DOENCAS[selectedKey].testes.map(exame => `<div class="col-md-6"><label for="${exame.test_id}" class="form-label">${exame.label}</label><input type="text" class="form-control form-control-sm" id="${exame.test_id}" name="${exame.test_id}" placeholder="${exame.placeholder || ''}"></div>`).join('');
+                inputs.examesEspecificosContainer.innerHTML = examesHtml;
+            }
+        });
+    }
 
-    const renderPhotos = () => {
-        if (inputs.photosPreviewContainer) {
-            inputs.photosPreviewContainer.innerHTML = currentPhotoPaths.map((path, index) => {
-                const safePath = `safe-file://${path.replaceAll('\\', '/')}`;
-                return `<div class="photo-thumbnail"><img src="${safePath}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`;
-            }).join('');
-        }
-    };
+    const renderPhotos = () => {
+        if (inputs.photosPreviewContainer) {
+            inputs.photosPreviewContainer.innerHTML = currentPhotoPaths.map((path, index) => {
+                const safePath = `safe-file://${path.replaceAll('\\', '/')}`;
+                return `<div class="photo-thumbnail"><img src="${safePath}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`;
+            }).join('');
+        }
+    };
 
-    if (inputs.btnAddPhoto) {
-        inputs.btnAddPhoto.addEventListener('click', async () => {
-            if (window.electronAPI && typeof window.electronAPI.selectPhotos === 'function') {
-                const result = await window.electronAPI.selectPhotos();
-                if (result && result.success) { currentPhotoPaths.push(...result.paths); renderPhotos(); }
-            } else {
-                showNotification('selectPhotos não disponível.', 'error');
-            }
-        });
-    }
-    if (inputs.photosPreviewContainer) {
-        inputs.photosPreviewContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-photo-btn')) {
-                currentPhotoPaths.splice(parseInt(e.target.dataset.index, 10), 1);
-                renderPhotos();
-            }
-        });
-    }
+    if (inputs.btnAddPhoto) {
+        inputs.btnAddPhoto.addEventListener('click', async () => {
+            if (window.electronAPI && typeof window.electronAPI.selectPhotos === 'function') {
+                const result = await window.electronAPI.selectPhotos();
+                if (result && result.success) { currentPhotoPaths.push(...result.paths); renderPhotos(); }
+            } else {
+                showNotification('selectPhotos não disponível.', 'error');
+            }
+        });
+    }
+    if (inputs.photosPreviewContainer) {
+        inputs.photosPreviewContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-photo-btn')) {
+                currentPhotoPaths.splice(parseInt(e.target.dataset.index, 10), 1);
+                renderPhotos();
+            }
+        });
+    }
 
-    if (inputs.btnAddExame) {
-        inputs.btnAddExame.addEventListener('click', () => {
-            const newExame = document.createElement('div');
-            newExame.className = 'exame-item';
-            newExame.innerHTML = `<input type="text" class="form-control form-control-sm exame-descricao" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button>`;
-            if (inputs.examesListContainer) inputs.examesListContainer.appendChild(newExame);
-            newExame.querySelector('input').focus();
-        });
-    }
-    if (inputs.examesListContainer) {
-        inputs.examesListContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-exame-btn')) e.target.closest('.exame-item').remove();
-        });
-    }
+    if (inputs.btnAddExame) {
+        inputs.btnAddExame.addEventListener('click', () => {
+            const newExame = document.createElement('div');
+            newExame.className = 'exame-item';
+            newExame.innerHTML = `<input type="text" class="form-control form-control-sm exame-descricao" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button>`;
+            if (inputs.examesListContainer) inputs.examesListContainer.appendChild(newExame);
+            newExame.querySelector('input').focus();
+        });
+    }
+    if (inputs.examesListContainer) {
+        inputs.examesListContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-exame-btn')) e.target.closest('.exame-item').remove();
+        });
+    }
 
-    if (inputs.btnAddPassadoLaboral) {
-        inputs.btnAddPassadoLaboral.addEventListener('click', () => {
-            const newEntry = document.createElement('div');
-            newEntry.className = 'passado-laboral-item';
-            newEntry.innerHTML = `<input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa"><input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função"><input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período (ex: jan/2020 a dez/2022)"><button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button>`;
-            if (inputs.passadoLaboralList) inputs.passadoLaboralList.appendChild(newEntry);
-            newEntry.querySelector('.laboral-empresa').focus();
-        });
-    }
-    if (inputs.passadoLaboralList) {
-        inputs.passadoLaboralList.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-passado-laboral-btn')) e.target.closest('.passado-laboral-item').remove();
-        });
-    }
+    if (inputs.btnAddPassadoLaboral) {
+        inputs.btnAddPassadoLaboral.addEventListener('click', () => {
+            const newEntry = document.createElement('div');
+            newEntry.className = 'passado-laboral-item';
+            newEntry.innerHTML = `<input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa"><input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função"><input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período (ex: jan/2020 a dez/2022)"><button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button>`;
+            if (inputs.passadoLaboralList) inputs.passadoLaboralList.appendChild(newEntry);
+            newEntry.querySelector('.laboral-empresa').focus();
+        });
+    }
+    if (inputs.passadoLaboralList) {
+        inputs.passadoLaboralList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-passado-laboral-btn')) e.target.closest('.passado-laboral-item').remove();
+        });
+    }
 
-    if (inputs.quesitosContainer) {
-        inputs.quesitosContainer.addEventListener('click', e => {
-            const type = e.target.dataset.type;
-            if (type) {
-                const list = document.getElementById(`quesitos-${type}-list`);
-                const quesitos = getQuesitosFromDOM(list);
-                quesitos.push({ pergunta: '', resposta: '' });
-                renderQuesitos(list, quesitos);
-            }
-            if (e.target.classList.contains('remove-quesito-btn')) {
-                const item = e.target.closest('.quesito-item');
-                const list = item.parentElement;
-                item.remove();
-                list.querySelectorAll('.number').forEach((num, index) => { num.textContent = `${index + 1}.`; });
-            }
-        });
-    }
+    if (inputs.quesitosContainer) {
+        inputs.quesitosContainer.addEventListener('click', e => {
+            const type = e.target.dataset.type;
+            if (type) {
+                const list = document.getElementById(`quesitos-${type}-list`);
+                const quesitos = getQuesitosFromDOM(list);
+                quesitos.push({ pergunta: '', resposta: '' });
+                renderQuesitos(list, quesitos);
+            }
+            if (e.target.classList.contains('remove-quesito-btn')) {
+                const item = e.target.closest('.quesito-item');
+                const list = item.parentElement;
+                item.remove();
+                list.querySelectorAll('.number').forEach((num, index) => { num.textContent = `${index + 1}.`; });
+            }
+        });
+    }
 });
 
 // --- FUNÇÕES GLOBAIS DE CONTROLE ---
 function safeGet(id){ return document.getElementById(id); }
 const getQuesitosFromDOM = (container) => {
-    if (!container) return [];
-    return Array.from(container.querySelectorAll('.quesito-item')).map(item => ({ pergunta: item.querySelector('.quesito-pergunta').value, resposta: item.querySelector('.quesito-resposta').value }));
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('.quesito-item')).map(item => ({ pergunta: item.querySelector('.quesito-pergunta').value, resposta: item.querySelector('.quesito-resposta').value }));
 };
 const getExamesFromDOM = () => {
-    const container = safeGet('exames-list-container');
-    if (!container) return [];
-    return Array.from(container.querySelectorAll('.exame-item')).map(item => ({ descricao: item.querySelector('.exame-descricao').value }));
+    const container = safeGet('exames-list-container');
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('.exame-item')).map(item => ({ descricao: item.querySelector('.exame-descricao').value }));
 };
 const getPassadoLaboralFromDOM = () => {
-    const container = safeGet('passado-laboral-list');
-    if (!container) return [];
-    return Array.from(container.querySelectorAll('.passado-laboral-item')).map(item => ({ empresa: item.querySelector('.laboral-empresa').value, funcao: item.querySelector('.laboral-funcao').value, periodo: item.querySelector('.laboral-periodo').value }));
+    const container = safeGet('passado-laboral-list');
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('.passado-laboral-item')).map(item => ({ empresa: item.querySelector('.laboral-empresa').value, funcao: item.querySelector('.laboral-funcao').value, periodo: item.querySelector('.laboral-periodo').value }));
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    const btnNewGlobal = document.getElementById('btn-new');
-    const btnListGlobal = document.getElementById('btn-list');
-    const btnCancelGlobal = document.getElementById('btn-cancel');
-    if (btnNewGlobal) btnNewGlobal.addEventListener('click', () => showFormView());
-    if (btnListGlobal) btnListGlobal.addEventListener('click', loadLaudos);
-    if (btnCancelGlobal) btnCancelGlobal.addEventListener('click', () => { editingId = null; showListView(); });
-    if (laudoForm) laudoForm.addEventListener('submit', async (e) => { e.preventDefault(); await saveOrUpdateLaudo(); });
+    const btnNewGlobal = document.getElementById('btn-new');
+    const btnListGlobal = document.getElementById('btn-list');
+    const btnCancelGlobal = document.getElementById('btn-cancel');
+    if (btnNewGlobal) btnNewGlobal.addEventListener('click', () => showFormView());
+    if (btnListGlobal) btnListGlobal.addEventListener('click', loadLaudos);
+    if (btnCancelGlobal) btnCancelGlobal.addEventListener('click', () => { editingId = null; showListView(); });
+    if (laudoForm) laudoForm.addEventListener('submit', async (e) => { e.preventDefault(); await saveOrUpdateLaudo(); });
 });
 
 function showFormView(id = null) {
-    editingId = id;
-    if (listView) listView.style.display = 'none';
-    if (formView) formView.style.display = 'block';
-    if (loadingView) loadingView.classList.add('d-none');
-    if (id) { loadLaudoForEditing(id); } else { resetForm(); }
+    editingId = id;
+    if (listView) listView.style.display = 'none';
+    if (formView) formView.style.display = 'block';
+    if (loadingView) loadingView.classList.add('d-none');
+    if (id) { loadLaudoForEditing(id); } else { resetForm(); }
 }
 function showListView() {
-    if (listView) listView.style.display = 'block';
-    if (formView) formView.style.display = 'none';
-    if (loadingView) loadingView.classList.add('d-none');
-    resetForm();
+    if (listView) listView.style.display = 'block';
+    if (formView) formView.style.display = 'none';
+    if (loadingView) loadingView.classList.add('d-none');
+    resetForm();
 }
 function showLoading() {
-    if (listView) listView.style.display = 'none';
-    if (formView) formView.style.display = 'none';
-    if (loadingView) {
-        loadingView.classList.remove('d-none');
-        loadingView.classList.add('d-flex');
-    }
+    if (listView) listView.style.display = 'none';
+    if (formView) formView.style.display = 'none';
+    if (loadingView) {
+        loadingView.classList.remove('d-none');
+        loadingView.classList.add('d-flex');
+    }
 }
 
 async function loadLaudos() {
-    showLoading();
-    try {
-        if (window.electronAPI && typeof window.electronAPI.loadLaudos === 'function') {
-            const result = await window.electronAPI.loadLaudos();
-            if (result.success) renderLaudosList(result.data);
-            else showNotification('Erro ao carregar: ' + result.error, 'error');
-        } else {
-            renderLaudosList([]);
-        }
-    } catch (error) {
-        showNotification('Erro ao carregar: ' + error.message, 'error');
-    }
-    showListView();
+    showLoading();
+    try {
+        if (window.electronAPI && typeof window.electronAPI.loadLaudos === 'function') {
+            const result = await window.electronAPI.loadLaudos();
+            if (result.success) renderLaudosList(result.data);
+            else showNotification('Erro ao carregar: ' + result.error, 'error');
+        } else {
+            renderLaudosList([]);
+        }
+    } catch (error) {
+        showNotification('Erro ao carregar: ' + error.message, 'error');
+    }
+    showListView();
 }
 
 async function loadLaudoForEditing(id) {
-    showLoading();
-    try {
-        if (window.electronAPI && typeof window.electronAPI.getLaudo === 'function') {
-            const result = await window.electronAPI.getLaudo(id);
-            if (result.success) { populateForm(result.data); showFormView(id); }
-            else { showNotification('Erro ao carregar laudo: ' + result.error, 'error'); showListView(); }
-        } else {
-            showNotification('getLaudo não disponível.', 'error');
-            showListView();
-        }
-    } catch (error) {
-        showNotification('Erro ao carregar laudo: ' + error.message, 'error');
-        showListView();
-    }
+    showLoading();
+    try {
+        if (window.electronAPI && typeof window.electronAPI.getLaudo === 'function') {
+            const result = await window.electronAPI.getLaudo(id);
+            if (result.success) { populateForm(result.data); showFormView(id); }
+            else { showNotification('Erro ao carregar laudo: ' + result.error, 'error'); showListView(); }
+        } else {
+            showNotification('getLaudo não disponível.', 'error');
+            showListView();
+        }
+    } catch (error) {
+        showNotification('Erro ao carregar laudo: ' + error.message, 'error');
+        showListView();
+    }
 }
 async function deleteLaudo(id) {
-    if (!confirm('Tem certeza?')) return;
-    showLoading();
-    try {
-        if (window.electronAPI && typeof window.electronAPI.deleteLaudo === 'function') {
-            const result = await window.electronAPI.deleteLaudo(id);
-            if (result.success) { showNotification('Laudo excluído!', 'success'); loadLaudos(); }
-            else { showNotification('Erro ao excluir: ' + result.error, 'error'); }
-        } else showNotification('deleteLaudo não disponível.', 'error');
-    } catch (error) {
-        showNotification('Erro ao excluir: ' + error.message, 'error');
-    }
+    if (!confirm('Tem certeza?')) return;
+    showLoading();
+    try {
+        if (window.electronAPI && typeof window.electronAPI.deleteLaudo === 'function') {
+            const result = await window.electronAPI.deleteLaudo(id);
+            if (result.success) { showNotification('Laudo excluído!', 'success'); loadLaudos(); }
+            else { showNotification('Erro ao excluir: ' + result.error, 'error'); }
+        } else showNotification('deleteLaudo não disponível.', 'error');
+    } catch (error) {
+        showNotification('Erro ao excluir: ' + error.message, 'error');
+    }
 }
 
 async function saveOrUpdateLaudo() {
-    if (!laudoForm) { showNotification('Formulário não encontrado', 'error'); return; }
-    const formDataObj = new FormData(laudoForm);
-    const formData = {};
-    for (let [key, value] of formDataObj.entries()) formData[key] = (typeof value === 'string') ? value.trim() : value;
+    if (!laudoForm) { showNotification('Formulário não encontrado', 'error'); return; }
+    const formDataObj = new FormData(laudoForm);
+    const formData = {};
+    for (let [key, value] of formDataObj.entries()) formData[key] = (typeof value === 'string') ? value.trim() : value;
 
-    if (formData.altura) formData.altura = String(formData.altura).replace(',', '.');
-    if (formData.peso) formData.peso = String(formData.peso).replace(',', '.');
+    if (formData.altura) formData.altura = String(formData.altura).replace(',', '.');
+    if (formData.peso) formData.peso = String(formData.peso).replace(',', '.');
 
-    if (!formData.numero_processo || !formData.reclamante) { showNotification('Processo e Reclamante são obrigatórios.', 'error'); return; }
+    if (!formData.numero_processo || !formData.reclamante) { showNotification('Processo e Reclamante são obrigatórios.', 'error'); return; }
 
-    formData.fotos_paths = JSON.stringify(currentPhotoPaths);
-    formData.quesitos_juizo = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-juizo-list')));
-    formData.exames_complementares = JSON.stringify(getExamesFromDOM());
-    formData.passado_laboral = JSON.stringify(getPassadoLaboralFromDOM());
+    formData.fotos_paths = JSON.stringify(currentPhotoPaths);
+    formData.quesitos_juizo = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-juizo-list')));
+    formData.exames_complementares = JSON.stringify(getExamesFromDOM());
+    formData.passado_laboral = JSON.stringify(getPassadoLaboralFromDOM());
 
-    showLoading();
-    try {
-        if (editingId) formData.id = editingId;
-        if (window.electronAPI && typeof window.electronAPI.saveLaudo === 'function') {
-            const result = await window.electronAPI.saveLaudo(formData);
-            if (result.success) { showNotification('Laudo salvo!', 'success'); editingId = null; loadLaudos(); }
-            else { showNotification('Erro ao salvar: ' + result.error, 'error'); showFormView(editingId); }
-        } else {
-            console.warn('saveLaudo não disponível; simulando salvamento.');
-            showNotification('Laudo (simulado) salvo!', 'success');
-            editingId = null;
-            loadLaudos();
-        }
-    } catch (error) {
-        showNotification('Erro ao salvar: ' + error.message, 'error');
-        showFormView(editingId);
-    }
+    showLoading();
+    try {
+        if (editingId) formData.id = editingId;
+        if (window.electronAPI && typeof window.electronAPI.saveLaudo === 'function') {
+            const result = await window.electronAPI.saveLaudo(formData);
+            if (result.success) { showNotification('Laudo salvo!', 'success'); editingId = null; loadLaudos(); }
+            else { showNotification('Erro ao salvar: ' + result.error, 'error'); showFormView(editingId); }
+        } else {
+            console.warn('saveLaudo não disponível; simulando salvamento.');
+            showNotification('Laudo (simulado) salvo!', 'success');
+            editingId = null;
+            loadLaudos();
+        }
+    } catch (error) {
+        showNotification('Erro ao salvar: ' + error.message, 'error');
+        showFormView(editingId);
+    }
 }
 
 function renderLaudosList(laudos) {
-    if (!laudos || laudos.length === 0) {
-        if (laudosList) laudosList.innerHTML = '<p class="text-muted">Nenhum laudo cadastrado.</p>';
-        return;
-    }
-    if (!laudosList) return;
-    laudosList.innerHTML = laudos.map(laudo => `<div class="col-lg-4 col-md-6"><div class="card h-100"><div class="card-body"><h5 class="card-title">${laudo.numero_processo || 'N/A'}</h5><p class="card-text"><strong>Reclamante:</strong> ${laudo.reclamante || 'N/A'}</p><p class="card-text"><small class="text-muted">Data: ${formatDate(laudo.data_laudo)}</small></p></div><div class="card-footer bg-transparent border-top-0 text-end"><button class="btn btn-sm btn-outline-primary" onclick="showFormView(${laudo.id})">Editar</button><button class="btn btn-sm btn-outline-danger" onclick="deleteLaudo(${laudo.id})">Excluir</button></div></div></div>`).join('');
+    if (!laudos || laudos.length === 0) {
+        if (laudosList) laudosList.innerHTML = '<p class="text-muted">Nenhum laudo cadastrado.</p>';
+        return;
+    }
+    if (!laudosList) return;
+    laudosList.innerHTML = laudos.map(laudo => `<div class="col-lg-4 col-md-6"><div class="card h-100"><div class="card-body"><h5 class="card-title">${laudo.numero_processo || 'N/A'}</h5><p class="card-text"><strong>Reclamante:</strong> ${laudo.reclamante || 'N/A'}</p><p class="card-text"><small class="text-muted">Data: ${formatDate(laudo.data_laudo)}</small></p></div><div class="card-footer bg-transparent border-top-0 text-end"><button class="btn btn-sm btn-outline-primary" onclick="showFormView(${laudo.id})">Editar</button><button class="btn btn-sm btn-outline-danger" onclick="deleteLaudo(${laudo.id})">Excluir</button></div></div></div>`).join('');
 }
 
 const renderQuesitos = (container, quesitos) => {
-    if (!container) return;
-    container.innerHTML = quesitos.map((q, index) => `<div class="quesito-item" data-index="${index}"><span class="number">${index + 1}.</span><div class="fields flex-grow-1"><textarea class="form-control mb-2 quesito-pergunta" rows="2" placeholder="Digite a pergunta">${q.pergunta}</textarea><textarea class="form-control quesito-resposta" rows="3" placeholder="Digite a resposta">${q.resposta}</textarea></div><button type="button" class="btn btn-danger btn-sm remove-quesito-btn align-self-start">&times;</button></div>`).join('');
+    if (!container) return;
+    container.innerHTML = quesitos.map((q, index) => `<div class="quesito-item" data-index="${index}"><span class="number">${index + 1}.</span><div class="fields flex-grow-1"><textarea class="form-control mb-2 quesito-pergunta" rows="2" placeholder="Digite a pergunta">${q.pergunta}</textarea><textarea class="form-control quesito-resposta" rows="3" placeholder="Digite a resposta">${q.resposta}</textarea></div><button type="button" class="btn btn-danger btn-sm remove-quesito-btn align-self-start">&times;</button></div>`).join('');
 };
 
 function populateForm(data) {
-    if (!laudoForm) return;
-    resetForm();
-    Object.keys(data).forEach(key => {
-        const element = document.getElementById(key);
-        if (element && data[key] !== null) element.value = data[key];
-    });
-    if (document.getElementById('data_nascimento') && document.getElementById('data_nascimento').value) document.getElementById('data_nascimento').dispatchEvent(new Event('change'));
-    if ((document.getElementById('peso') && document.getElementById('peso').value) || (document.getElementById('altura') && document.getElementById('altura').value)) {
-        if (document.getElementById('altura')) document.getElementById('altura').dispatchEvent(new Event('input'));
-    }
+    if (!laudoForm) return;
+    resetForm();
+    Object.keys(data).forEach(key => {
+        const element = document.getElementById(key);
+        if (element && data[key] !== null) element.value = data[key];
+    });
+    if (document.getElementById('data_nascimento') && document.getElementById('data_nascimento').value) document.getElementById('data_nascimento').dispatchEvent(new Event('change'));
+    if ((document.getElementById('peso') && document.getElementById('peso').value) || (document.getElementById('altura') && document.getElementById('altura').value)) {
+        if (document.getElementById('altura')) document.getElementById('altura').dispatchEvent(new Event('input'));
+    }
 
-    currentPhotoPaths = data.fotos_paths ? JSON.parse(data.fotos_paths) : [];
-    const container = document.getElementById('photos-preview-container');
-    if (container) {
-        container.innerHTML = currentPhotoPaths.map((path, index) => {
-            const safePath = `safe-file://${path.replaceAll('\\', '/')}`;
-            return `<div class="photo-thumbnail"><img src="${safePath}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`;
-        }).join('');
-    }
+    currentPhotoPaths = data.fotos_paths ? JSON.parse(data.fotos_paths) : [];
+    const container = document.getElementById('photos-preview-container');
+    if (container) {
+        container.innerHTML = currentPhotoPaths.map((path, index) => {
+            const safePath = `safe-file://${path.replaceAll('\\', '/')}`;
+            return `<div class="photo-thumbnail"><img src="${safePath}" alt="Foto ${index + 1}" /><button type="button" class="remove-photo-btn" data-index="${index}">&times;</button></div>`;
+        }).join('');
+    }
 
-    const exames = data.exames_complementares ? JSON.parse(data.exames_complementares) : [];
-    const examesContainer = document.getElementById('exames-list-container');
-    if (examesContainer) examesContainer.innerHTML = exames.map(exame => `<div class="exame-item"><input type="text" class="form-control form-control-sm exame-descricao" value="${exame.descricao}" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button></div>`).join('');
+    const exames = data.exames_complementares ? JSON.parse(data.exames_complementares) : [];
+    const examesContainer = document.getElementById('exames-list-container');
+    if (examesContainer) examesContainer.innerHTML = exames.map(exame => `<div class="exame-item"><input type="text" class="form-control form-control-sm exame-descricao" value="${exame.descricao}" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button></div>`).join('');
 
-    const passadoLaboral = data.passado_laboral ? JSON.parse(data.passado_laboral) : [];
-    const passadoLaboralContainer = document.getElementById('passado-laboral-list');
-    if (passadoLaboralContainer) passadoLaboralContainer.innerHTML = passadoLaboral.map(item => `<div class="passado-laboral-item"><input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa" value="${item.empresa || ''}"><input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função" value="${item.funcao || ''}"><input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período" value="${item.periodo || ''}"><button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button></div>`).join('');
+    const passadoLaboral = data.passado_laboral ? JSON.parse(data.passado_laboral) : [];
+    const passadoLaboralContainer = document.getElementById('passado-laboral-list');
+    if (passadoLaboralContainer) passadoLaboralContainer.innerHTML = passadoLaboral.map(item => `<div class="passado-laboral-item"><input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa" value="${item.empresa || ''}"><input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função" value="${item.funcao || ''}"><input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período" value="${item.periodo || ''}"><button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button></div>`).join('');
 
-    const quesitosJuizo = data.quesitos_juizo ? JSON.parse(data.quesitos_juizo) : [];
-    renderQuesitos(document.getElementById('quesitos-juizo-list'), quesitosJuizo);
+    const quesitosJuizo = data.quesitos_juizo ? JSON.parse(data.quesitos_juizo) : [];
+    renderQuesitos(document.getElementById('quesitos-juizo-list'), quesitosJuizo);
 
-    const selectTipoExame = document.getElementById('tipo-exame-especifico');
-    if (selectTipoExame && data.tipo_exame_especifico) {
-        selectTipoExame.value = data.tipo_exame_especifico;
-        selectTipoExame.dispatchEvent(new Event('change'));
-        setTimeout(() => {
-            if (DADOS_DOENCAS[data.tipo_exame_especifico]) {
-                DADOS_DOENCAS[data.tipo_exame_especifico].testes.forEach(exame => {
-                    if (data[exame.test_id] && document.getElementById(exame.test_id)) {
-                        document.getElementById(exame.test_id).value = data[exame.test_id];
-                    }
-                });
-            }
-        }, 100);
-    }
+    const selectTipoExame = document.getElementById('tipo-exame-especifico');
+    if (selectTipoExame && data.tipo_exame_especifico) {
+        selectTipoExame.value = data.tipo_exame_especifico;
+        selectTipoExame.dispatchEvent(new Event('change'));
+        setTimeout(() => {
+            if (DADOS_DOENCAS[data.tipo_exame_especifico]) {
+                DADOS_DOENCAS[data.tipo_exame_especifico].testes.forEach(exame => {
+                    if (data[exame.test_id] && document.getElementById(exame.test_id)) {
+                        document.getElementById(exame.test_id).value = data[exame.test_id];
+                    }
+                });
+            }
+        }, 100);
+    }
 }
 
 function resetForm() {
-    if (!laudoForm) return;
-    laudoForm.reset();
-    currentPhotoPaths = [];
-    if(document.getElementById('photos-preview-container')) document.getElementById('photos-preview-container').innerHTML = '';
-    if(document.getElementById('exames-list-container')) document.getElementById('exames-list-container').innerHTML = '';
-    if(document.getElementById('passado-laboral-list')) document.getElementById('passado-laboral-list').innerHTML = '';
-    if(document.getElementById('exames-especificos-container')) document.getElementById('exames-especificos-container').innerHTML = '';
-    if(document.getElementById('tipo-exame-especifico')) document.getElementById('tipo-exame-especifico').value = '';
-    setupQuesitosUI();
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    if (document.getElementById('data_pericia')) document.getElementById('data_pericia').value = today;
-    if (document.getElementById('data_laudo')) document.getElementById('data_laudo').value = today;
-    if (document.getElementById('hora_pericia')) document.getElementById('hora_pericia').value = `${hours}:${minutes}`;
+    if (!laudoForm) return;
+    laudoForm.reset();
+    currentPhotoPaths = [];
+    if(document.getElementById('photos-preview-container')) document.getElementById('photos-preview-container').innerHTML = '';
+    if(document.getElementById('exames-list-container')) document.getElementById('exames-list-container').innerHTML = '';
+    if(document.getElementById('passado-laboral-list')) document.getElementById('passado-laboral-list').innerHTML = '';
+    if(document.getElementById('exames-especificos-container')) document.getElementById('exames-especificos-container').innerHTML = '';
+    if(document.getElementById('tipo-exame-especifico')) document.getElementById('tipo-exame-especifico').value = '';
+    setupQuesitosUI();
+    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    if (document.getElementById('data_pericia')) document.getElementById('data_pericia').value = today;
+    if (document.getElementById('data_laudo')) document.getElementById('data_laudo').value = today;
+    if (document.getElementById('hora_pericia')) document.getElementById('hora_pericia').value = `${hours}:${minutes}`;
 }

@@ -124,6 +124,28 @@ ipcMain.handle('save-doenca', async (event, doenca) => {
   }
 });
 
+// --- NOVOS HANDLERS ADICIONADOS AQUI ---
+ipcMain.handle('delete-doenca', async (event, id) => {
+    try {
+        await db.deleteDoenca(id);
+        return { success: true };
+    } catch (error) {
+        console.error(error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('update-doenca', async (event, doencaData) => {
+    try {
+        await db.updateDoenca(doencaData);
+        return { success: true };
+    } catch (error) {
+        console.error(error);
+        return { success: false, error: error.message };
+    }
+});
+// --- FIM DOS NOVOS HANDLERS ---
+
 
 ipcMain.handle('export-word', async (event, laudoData) => {
   try {
