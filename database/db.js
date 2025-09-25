@@ -1,4 +1,4 @@
-// database/db.js - VERSÃO FINAL CORRIGIDA (caminho do banco de dados local)
+// database/db.js - VERSÃO FINAL CORRIGIDA COM JSON EM exames_especificos
 
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
@@ -8,7 +8,6 @@ const { app } = require('electron');
 let db;
 
 // --- FUNÇÕES UTILITÁRIAS (PROMISIFY) ---
-
 function runAsync(database, sql, params = []) {
   return new Promise((resolve, reject) => {
     database.run(sql, params, function (err) {
@@ -28,17 +27,15 @@ function getAsync(database, sql, params = []) {
 }
 
 function allAsync(database, sql, params = []) {
-    return new Promise((resolve, reject) => {
-        database.all(sql, params, (err, rows) => {
-            if (err) return reject(new Error(`Erro na query: ${sql} - ${err.message}`));
-            resolve(rows);
-        });
+  return new Promise((resolve, reject) => {
+    database.all(sql, params, (err, rows) => {
+      if (err) return reject(new Error(`Erro na query: ${sql} - ${err.message}`));
+      resolve(rows);
     });
+  });
 }
 
-
-// --- LÓGICA DE INICIALIZAÇÃO E SEEDING ---
-
+// --- LÓGICA DE INICIALIZAÇÃO ---
 async function seedInitialData(database) {
   const row = await getAsync(database, 'SELECT COUNT(*) as count FROM doencas');
   if (row.count > 0) {
@@ -48,8 +45,23 @@ async function seedInitialData(database) {
 
   console.log('Inserindo dados iniciais (PAIR, LER/DORT)...');
   const defaultDoencas = [
-    { nome: 'PAIR', testes: [ { label: 'Otoscopia', placeholder: 'Sem particularidades' }, { label: 'Oroscopia', placeholder: 'Sem particularidades' }, { label: 'Orofaringe', placeholder: 'Sem particularidades' } ] },
-    { nome: 'LER/DORT', testes: [ { label: 'Inspeção', placeholder: 'Sem edemas, deformidades ou sinais flogísticos' }, { label: 'Palpação', placeholder: 'Musculatura normotrófica, sem contraturas' }, { label: 'Mobilidade Articular', placeholder: 'Amplitude de movimentos preservada' }, { label: 'Testes Especiais (Phalen, Tinel, etc.)', placeholder: 'Negativos' } ] }
+    {
+      nome: 'PAIR',
+      testes: [
+        { label: 'Otoscopia', placeholder: 'Sem particularidades' },
+        { label: 'Oroscopia', placeholder: 'Sem particularidades' },
+        { label: 'Orofaringe', placeholder: 'Sem particularidades' }
+      ]
+    },
+    {
+      nome: 'LER/DORT',
+      testes: [
+        { label: 'Inspeção', placeholder: 'Sem edemas, deformidades ou sinais flogísticos' },
+        { label: 'Palpação', placeholder: 'Musculatura normotrófica, sem contraturas' },
+        { label: 'Mobilidade Articular', placeholder: 'Amplitude de movimentos preservada' },
+        { label: 'Testes Especiais (Phalen, Tinel, etc.)', placeholder: 'Negativos' }
+      ]
+    }
   ];
 
   await runAsync(database, 'BEGIN TRANSACTION;');
@@ -58,8 +70,15 @@ async function seedInitialData(database) {
       const result = await runAsync(database, 'INSERT INTO doencas (nome) VALUES (?)', [doenca.nome]);
       const doencaId = result.lastID;
       for (const teste of doenca.testes) {
-        const test_id = (doenca.nome + '_' + teste.label).trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_{2,}/g, '_');
-        await runAsync(database, 'INSERT INTO testes (doenca_id, label, placeholder, test_id) VALUES (?, ?, ?, ?)', [doencaId, teste.label, teste.placeholder, test_id]);
+        const test_id = (doenca.nome + '_' + teste.label)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '_')
+          .replace(/_{2,}/g, '_');
+        await runAsync(database,
+          'INSERT INTO testes (doenca_id, label, placeholder, test_id) VALUES (?, ?, ?, ?)',
+          [doencaId, teste.label, teste.placeholder, test_id]
+        );
       }
     }
     await runAsync(database, 'COMMIT;');
@@ -73,10 +92,9 @@ async function seedInitialData(database) {
 function initDatabase() {
   return new Promise((resolve, reject) => {
     try {
-      // Lógica CORRIGIDA para determinar o caminho do banco de dados
       const isDev = process.mainModule.filename.indexOf('app.asar') === -1;
       const dbBaseDir = isDev
-        ? path.join(__dirname, '..') 
+        ? path.join(__dirname, '..')
         : path.dirname(app.getPath('exe'));
 
       const dbDir = path.join(dbBaseDir, 'database', 'data');
@@ -93,12 +111,57 @@ function initDatabase() {
 
         try {
           await runAsync(db, 'PRAGMA journal_mode = WAL;');
-          await runAsync(db, `CREATE TABLE IF NOT EXISTS laudos (id INTEGER PRIMARY KEY AUTOINCREMENT, numero_processo TEXT NOT NULL, vara_trabalho TEXT, cidade TEXT, reclamante TEXT NOT NULL, reclamada TEXT, data_admissao TEXT, data_demissao TEXT, funcao_reclamante TEXT, data_nascimento TEXT, cpf TEXT, naturalidade TEXT, queixa_principal TEXT, historia_molestia TEXT, passado_laboral TEXT, altura REAL, peso REAL, imc REAL, fotos_paths TEXT, exame_fisico_geral TEXT, exames_complementares TEXT, analise_pericial TEXT, referencial_tecnico TEXT, conclusao TEXT, quesitos_juizo TEXT, data_pericia TEXT, hora_pericia TEXT, perito TEXT, crm TEXT, valor_honorarios REAL, valor_por_extenso TEXT, data_laudo TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
-          await runAsync(db, `CREATE TABLE IF NOT EXISTS doencas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE)`);
-          await runAsync(db, `CREATE TABLE IF NOT EXISTS testes (id INTEGER PRIMARY KEY AUTOINCREMENT, doenca_id INTEGER NOT NULL, label TEXT NOT NULL, placeholder TEXT, test_id TEXT NOT NULL, FOREIGN KEY (doenca_id) REFERENCES doencas (id) ON DELETE CASCADE)`);
-          
+          await runAsync(db, `CREATE TABLE IF NOT EXISTS laudos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_processo TEXT NOT NULL,
+            vara_trabalho TEXT,
+            cidade TEXT,
+            reclamante TEXT NOT NULL,
+            reclamada TEXT,
+            data_admissao TEXT,
+            data_demissao TEXT,
+            funcao_reclamante TEXT,
+            data_nascimento TEXT,
+            cpf TEXT,
+            naturalidade TEXT,
+            queixa_principal TEXT,
+            historia_molestia TEXT,
+            passado_laboral TEXT,
+            altura REAL,
+            peso REAL,
+            imc REAL,
+            fotos_paths TEXT,
+            exame_fisico_geral TEXT,
+            exames_especificos TEXT,
+            exames_complementares TEXT,
+            analise_pericial TEXT,
+            referencial_tecnico TEXT,
+            conclusao TEXT,
+            quesitos_juizo TEXT,
+            data_pericia TEXT,
+            hora_pericia TEXT,
+            perito TEXT,
+            crm TEXT,
+            valor_honorarios REAL,
+            valor_por_extenso TEXT,
+            data_laudo TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )`);
+          await runAsync(db, `CREATE TABLE IF NOT EXISTS doencas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL UNIQUE
+          )`);
+          await runAsync(db, `CREATE TABLE IF NOT EXISTS testes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            doenca_id INTEGER NOT NULL,
+            label TEXT NOT NULL,
+            placeholder TEXT,
+            test_id TEXT NOT NULL,
+            FOREIGN KEY (doenca_id) REFERENCES doencas (id) ON DELETE CASCADE
+          )`);
+
           await seedInitialData(db);
-          
+
           console.log('Inicialização do banco de dados concluída com sucesso.');
           resolve();
         } catch (initError) {
@@ -111,10 +174,14 @@ function initDatabase() {
   });
 }
 
-
-// --- FUNÇÕES CRUD PARA O RESTO DA APLICAÇÃO ---
+// --- FUNÇÕES CRUD ---
 
 async function saveLaudo(laudoData) {
+  // serializa exames_especificos como JSON
+  if (laudoData.exames_especificos && typeof laudoData.exames_especificos !== "string") {
+    laudoData.exames_especificos = JSON.stringify(laudoData.exames_especificos);
+  }
+
   const fields = Object.keys(laudoData).filter(f => f !== 'id');
   if (laudoData.id) {
     const setClause = fields.map(f => `${f} = ?`).join(', ');
@@ -127,12 +194,25 @@ async function saveLaudo(laudoData) {
   }
 }
 
-function loadLaudos() {
-  return allAsync(db, `SELECT * FROM laudos ORDER BY created_at DESC`);
+async function loadLaudos() {
+  const laudos = await allAsync(db, `SELECT * FROM laudos ORDER BY created_at DESC`);
+  // desserializa exames_especificos
+  return laudos.map(l => ({
+    ...l,
+    exames_especificos: l.exames_especificos ? JSON.parse(l.exames_especificos) : null
+  }));
 }
 
-function getLaudo(id) {
-  return getAsync(db, `SELECT * FROM laudos WHERE id = ?`, [id]);
+async function getLaudo(id) {
+  const laudo = await getAsync(db, `SELECT * FROM laudos WHERE id = ?`, [id]);
+  if (laudo && laudo.exames_especificos) {
+    try {
+      laudo.exames_especificos = JSON.parse(laudo.exames_especificos);
+    } catch {
+      laudo.exames_especificos = null;
+    }
+  }
+  return laudo;
 }
 
 function deleteLaudo(id) {
@@ -140,11 +220,20 @@ function deleteLaudo(id) {
 }
 
 async function getDoencasComTestes() {
-  const rows = await allAsync(db, `SELECT d.id as doenca_id, d.nome, t.id as teste_id_pk, t.label, t.placeholder, t.test_id FROM doencas d LEFT JOIN testes t ON d.id = t.doenca_id ORDER BY d.nome, t.id;`);
+  const rows = await allAsync(db, `SELECT d.id as doenca_id, d.nome, t.id as teste_id_pk, t.label, t.placeholder, t.test_id
+                                   FROM doencas d LEFT JOIN testes t ON d.id = t.doenca_id
+                                   ORDER BY d.nome, t.id;`);
   const doencas = {};
   rows.forEach(row => {
     if (!doencas[row.nome]) doencas[row.nome] = { id: row.doenca_id, testes: [] };
-    if (row.teste_id_pk) doencas[row.nome].testes.push({ id: row.teste_id_pk, label: row.label, placeholder: row.placeholder, test_id: row.test_id });
+    if (row.teste_id_pk) {
+      doencas[row.nome].testes.push({
+        id: row.teste_id_pk,
+        label: row.label,
+        placeholder: row.placeholder,
+        test_id: row.test_id
+      });
+    }
   });
   return doencas;
 }
@@ -156,7 +245,8 @@ async function saveDoencaComTestes(doenca) {
     const doencaId = result.lastID;
     if (doenca.testes && doenca.testes.length > 0) {
       for (const teste of doenca.testes) {
-        await runAsync(db, 'INSERT INTO testes (doenca_id, label, placeholder, test_id) VALUES (?, ?, ?, ?)', [doencaId, teste.label, teste.placeholder, teste.test_id]);
+        await runAsync(db, 'INSERT INTO testes (doenca_id, label, placeholder, test_id) VALUES (?, ?, ?, ?)',
+          [doencaId, teste.label, teste.placeholder, teste.test_id]);
       }
     }
     await runAsync(db, 'COMMIT;');
@@ -167,29 +257,34 @@ async function saveDoencaComTestes(doenca) {
   }
 }
 
-// --- FUNÇÕES DE UPDATE E DELETE DE DOENÇAS ADICIONADAS AQUI ---
 function deleteDoenca(id) {
-    return runAsync(db, `DELETE FROM doencas WHERE id = ?`, [id]);
+  return runAsync(db, `DELETE FROM doencas WHERE id = ?`, [id]);
 }
 
 async function updateDoenca(doencaData) {
-    const { id, nome, testes } = doencaData;
-    await runAsync(db, 'BEGIN TRANSACTION;');
-    try {
-        await runAsync(db, 'UPDATE doencas SET nome = ? WHERE id = ?', [nome, id]);
-        await runAsync(db, 'DELETE FROM testes WHERE doenca_id = ?', [id]);
-        if (testes && testes.length > 0) {
-            for (const teste of testes) {
-                const test_id = (nome + '_' + teste.label).trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_{2,}/g, '_');
-                await runAsync(db, 'INSERT INTO testes (doenca_id, label, placeholder, test_id) VALUES (?, ?, ?, ?)', [id, teste.label, teste.placeholder, test_id]);
-            }
-        }
-        await runAsync(db, 'COMMIT;');
-        return { updated: id };
-    } catch (error) {
-        await runAsync(db, 'ROLLBACK;');
-        throw error;
+  const { id, nome, testes } = doencaData;
+  await runAsync(db, 'BEGIN TRANSACTION;');
+  try {
+    await runAsync(db, 'UPDATE doencas SET nome = ? WHERE id = ?', [nome, id]);
+    await runAsync(db, 'DELETE FROM testes WHERE doenca_id = ?', [id]);
+    if (testes && testes.length > 0) {
+      for (const teste of testes) {
+        const test_id = (nome + '_' + teste.label)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '_')
+          .replace(/_{2,}/g, '_');
+        await runAsync(db,
+          'INSERT INTO testes (doenca_id, label, placeholder, test_id) VALUES (?, ?, ?, ?)',
+          [id, teste.label, teste.placeholder, test_id]);
+      }
     }
+    await runAsync(db, 'COMMIT;');
+    return { updated: id };
+  } catch (error) {
+    await runAsync(db, 'ROLLBACK;');
+    throw error;
+  }
 }
 
 module.exports = {
@@ -198,7 +293,6 @@ module.exports = {
   loadLaudos,
   getLaudo,
   deleteLaudo,
-  // --- EXPORTS ADICIONADAS AQUI ---
   deleteDoenca,
   updateDoenca,
   getDoencasComTestes,
