@@ -25,6 +25,37 @@ function showNotification(message, type) {
     setTimeout(() => notification.remove(), 4000);
 }
 
+// --- FUNÇÃO PARA FORMATAR ALTURA ---
+function formatarAltura(valor) {
+    if (!valor) return '';
+    
+    // Remove caracteres não numéricos
+    const numeros = valor.replace(/\D/g, '');
+    
+    if (numeros.length === 0) return '';
+    
+    // Se já está no formato correto (contém vírgula), retorna como está
+    if (valor.includes(',')) {
+        // Garante que tenha 2 dígitos após a vírgula
+        const partes = valor.split(',');
+        if (partes.length === 2) {
+            return `${partes[0]},${partes[1].padEnd(2, '0').substring(0, 2)}`;
+        }
+        return valor;
+    }
+    
+    // Formata o número puro para o formato de altura
+    if (numeros.length === 1) {
+        return `0,0${numeros}`;
+    } else if (numeros.length === 2) {
+        return `0,${numeros}`;
+    } else {
+        const metros = numeros.slice(0, -2);
+        const centimetros = numeros.slice(-2);
+        return `${metros},${centimetros}`;
+    }
+}
+
 // --- CARREGAMENTO ROBUSTO DO IMASK ---
 function loadIMaskOnce() {
     return new Promise((resolve, reject) => {
@@ -293,11 +324,51 @@ document.addEventListener('DOMContentLoaded', () => {
         examesEspecificosContainer: document.getElementById('exames-especificos-container')
     };
 
-    loadIMaskOnce().then((IMaskLib) => {
+     loadIMaskOnce().then((IMaskLib) => {
         try {
-            if (inputs.processo && typeof IMaskLib !== 'undefined') IMaskLib(inputs.processo, { mask: '0000000-00.0000.0.00.0000' });
-            if (inputs.cpf && typeof IMaskLib !== 'undefined') IMaskLib(inputs.cpf, { mask: '000.000.000-00' });
-            if (inputs.valorHonorarios && typeof IMaskLib !== 'undefined') IMaskLib(inputs.valorHonorarios, { mask: Number, scale: 2, signed: false, thousandsSeparator: '.', radix: ',', mapToRadix: [','], padFractionalZeros: true, normalizeZeros: true, min: 0 });
+            if (inputs.processo) IMaskLib(inputs.processo, { mask: '0000000-00.0000.0.00.0000' });
+            if (inputs.cpf) IMaskLib(inputs.cpf, { mask: '000.000.000-00' });
+            
+            const numberMaskOptions = {
+                mask: Number,
+                scale: 2,
+                signed: false,
+                thousandsSeparator: '',
+                radix: ',',
+                mapToRadix: ['.']
+            };
+
+            if (inputs.valorHonorarios) IMaskLib(inputs.valorHonorarios, {...numberMaskOptions, thousandsSeparator: '.'});
+            if (inputs.peso) IMaskLib(inputs.peso, numberMaskOptions);
+
+            // MÁSCARA ESPECÍFICA PARA ALTURA
+            if (inputs.altura) {
+                IMaskLib(inputs.altura, {
+                    mask: function (value) {
+                        // Remove tudo que não é número
+                        const cleanValue = value.replace(/\D/g, '');
+                        
+                        if (cleanValue.length === 0) return { value: '' };
+                        
+                        // Se tiver 3 dígitos ou mais, formata como 1,80
+                        if (cleanValue.length >= 3) {
+                            const metros = cleanValue.slice(0, -2);
+                            const centimetros = cleanValue.slice(-2);
+                            return { value: `${metros},${centimetros}` };
+                        }
+                        // Se tiver 1 ou 2 dígitos, assume que são centímetros (0,XX)
+                        else {
+                            return { value: `0,${cleanValue.padStart(2, '0')}` };
+                        }
+                    },
+                    // Função para converter o valor formatado de volta para número puro
+                    commit: function(value, masked) {
+                        // Remove a vírgula e zeros à esquerda desnecessários
+                        return value.replace(',', '').replace(/^0+/, '');
+                    }
+                });
+            }
+
         } catch (err) {
             console.error('[renderer] erro aplicando máscaras:', err);
             showNotification('Erro ao aplicar máscaras: ' + err.message, 'error');
@@ -337,6 +408,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputs.dataNascimento) { inputs.dataNascimento.max = new Date().toISOString().split("T")[0]; inputs.dataNascimento.addEventListener('change', calcularIdade); }
     if (inputs.peso) inputs.peso.addEventListener('input', calcularIMC);
     if (inputs.altura) inputs.altura.addEventListener('input', calcularIMC);
+
+    // EVENTOS ADICIONAIS PARA FORMATAR ALTURA
+    if (inputs.altura) {
+        // Formata quando o campo perde o foco
+        inputs.altura.addEventListener('blur', function() {
+            this.value = formatarAltura(this.value);
+            calcularIMC(); // Recalcula o IMC após formatar
+        });
+        
+        // Formata quando o campo é alterado (opcional)
+        inputs.altura.addEventListener('input', function() {
+            // Formata em tempo real se o usuário digitar vírgula
+            if (this.value.includes(',')) {
+                this.value = formatarAltura(this.value);
+            }
+        });
+    }
 
     if (inputs.selectTipoExame) {
         inputs.selectTipoExame.addEventListener('change', (e) => {
@@ -555,8 +643,22 @@ async function saveOrUpdateLaudo() {
     const formData = {};
     for (let [key, value] of formDataObj.entries()) formData[key] = (typeof value === 'string') ? value.trim() : value;
 
-    if (formData.altura) formData.altura = String(formData.altura).replace(',', '.');
-    if (formData.peso) formData.peso = String(formData.peso).replace(',', '.');
+    // --- ALTERAÇÃO FOCADA AQUI ---
+    // Garante que altura e peso sejam salvos com duas casas decimais.
+    if (formData.altura) {
+        let alturaNum = parseFloat(String(formData.altura).replace(',', '.'));
+        if (!isNaN(alturaNum)) {
+            // Converte cm para m se necessário e formata para duas casas decimais
+            let alturaMetros = alturaNum > 3 ? alturaNum / 100 : alturaNum;
+            formData.altura = alturaMetros.toFixed(2);
+        }
+    }
+    if (formData.peso) {
+        let pesoNum = parseFloat(String(formData.peso).replace(',', '.'));
+        if (!isNaN(pesoNum)) {
+            formData.peso = pesoNum.toFixed(2); // Formata para duas casas decimais
+        }
+    }
 
     if (!formData.numero_processo || !formData.reclamante) { showNotification('Processo e Reclamante são obrigatórios.', 'error'); return; }
 
@@ -612,7 +714,12 @@ function populateForm(data) {
         const element = document.getElementById(key);
         // Evita tentar preencher o campo JSON diretamente
         if (element && data[key] !== null && key !== 'exames_especificos') {
-            element.value = data[key];
+            // Formata a altura ao carregar os dados
+            if (key === 'altura' && data[key]) {
+                element.value = formatarAltura(String(data[key]));
+            } else {
+                element.value = data[key];
+            }
         }
     });
     
