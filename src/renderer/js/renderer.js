@@ -28,32 +28,15 @@ function showNotification(message, type) {
 // --- FUNÇÃO PARA FORMATAR ALTURA ---
 function formatarAltura(valor) {
     if (!valor) return '';
-    
-    // Remove caracteres não numéricos
-    const numeros = valor.replace(/\D/g, '');
-    
+    const numeros = String(valor).replace(/\D/g, '');
     if (numeros.length === 0) return '';
     
-    // Se já está no formato correto (contém vírgula), retorna como está
-    if (valor.includes(',')) {
-        // Garante que tenha 2 dígitos após a vírgula
-        const partes = valor.split(',');
-        if (partes.length === 2) {
-            return `${partes[0]},${partes[1].padEnd(2, '0').substring(0, 2)}`;
-        }
-        return valor;
-    }
+    if (numeros.length === 1) return `0,0${numeros}`;
+    if (numeros.length === 2) return `0,${numeros}`;
     
-    // Formata o número puro para o formato de altura
-    if (numeros.length === 1) {
-        return `0,0${numeros}`;
-    } else if (numeros.length === 2) {
-        return `0,${numeros}`;
-    } else {
-        const metros = numeros.slice(0, -2);
-        const centimetros = numeros.slice(-2);
-        return `${metros},${centimetros}`;
-    }
+    const metros = numeros.slice(0, -2);
+    const centimetros = numeros.slice(-2);
+    return `${metros},${centimetros}`;
 }
 
 // --- CARREGAMENTO ROBUSTO DO IMASK ---
@@ -92,12 +75,14 @@ function loadIMaskOnce() {
     });
 }
 
-// --- FUNÇÕES DE SETUP DA UI DINÂMICA ---
 function setupQuesitosUI() {
     const container = document.getElementById('quesitos-group-container');
     if (!container) return;
     const quesitoTemplate = (type, title) => `<div class="mb-3"><h5>${title}</h5><div id="quesitos-${type}-list" class="quesitos-list"></div><button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-type="${type}">Adicionar Pergunta</button></div>`;
-    container.innerHTML = quesitoTemplate('juizo', 'Quesitos do Juízo');
+    
+    // CORREÇÃO: Cria as seções para Reclamante e Reclamada
+    container.innerHTML = quesitoTemplate('reclamante', 'Quesitos do Reclamante');
+    container.innerHTML += quesitoTemplate('reclamada', 'Quesitos da Reclamada');
 }
 
 // --- LÓGICA DE GERENCIAMENTO DE DOENÇAS ---
@@ -280,9 +265,9 @@ function populateDoencasDropdown() {
     select.value = currentValue;
 }
 
-// --- INICIALIZAÇÃO E EVENTOS PRINCIPAIS ---
+// --- INICIALIZAÇÃO E EVENTOS PRINCIPAIS (ESTRUTURA CORRIGIDA) ---
 document.addEventListener('DOMContentLoaded', () => {
-    // atribui elementos globais
+    // 1. Atribui elementos globais
     listView = document.getElementById('list-view');
     formView = document.getElementById('form-view');
     loadingView = document.getElementById('loading-view');
@@ -299,11 +284,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const yearSpan = document.getElementById('year');
     if (yearSpan) yearSpan.textContent = new Date().getFullYear();
 
+    // 2. Anexa todos os handlers de eventos
     attachDoencasModalHandlers();
-
+    btnNew.addEventListener('click', () => showFormView());
+    btnList.addEventListener('click', loadLaudos);
+    btnCancel.addEventListener('click', () => { editingId = null; showListView(); });
+    laudoForm.addEventListener('submit', async (e) => { e.preventDefault(); await saveOrUpdateLaudo(); });
+    
+    // 3. Carrega os dados iniciais
     loadLaudos();
     loadDoencas();
 
+    // 4. Configura as lógicas do formulário
+    setupFormLogic();
+});
+
+function setupFormLogic() {
     const inputs = {
         processo: document.getElementById('numero_processo'),
         cpf: document.getElementById('cpf'),
@@ -405,9 +401,15 @@ document.addEventListener('DOMContentLoaded', () => {
         inputs.idade.value = idade;
     };
 
-    if (inputs.dataNascimento) { inputs.dataNascimento.max = new Date().toISOString().split("T")[0]; inputs.dataNascimento.addEventListener('change', calcularIdade); }
-    if (inputs.peso) inputs.peso.addEventListener('input', calcularIMC);
-    if (inputs.altura) inputs.altura.addEventListener('input', calcularIMC);
+    if (inputs.dataNascimento) { inputs.dataNascimento.addEventListener('change', calcularIdade); }
+    if (inputs.peso) { inputs.peso.addEventListener('input', calcularIMC); }
+    if (inputs.altura) {
+        inputs.altura.addEventListener('input', calcularIMC);
+        inputs.altura.addEventListener('blur', function() {
+            this.value = formatarAltura(this.value);
+            calcularIMC();
+        });
+    }
 
     // EVENTOS ADICIONAIS PARA FORMATAR ALTURA
     if (inputs.altura) {
@@ -513,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-});
+};
 
 // --- FUNÇÕES GLOBAIS DE CONTROLE ---
 function safeGet(id){ return document.getElementById(id); }
@@ -557,17 +559,6 @@ function getExamesEspecificosFromDOM() {
         testes: testes
     };
 }
-
-
-document.addEventListener('DOMContentLoaded', () => {
-    const btnNewGlobal = document.getElementById('btn-new');
-    const btnListGlobal = document.getElementById('btn-list');
-    const btnCancelGlobal = document.getElementById('btn-cancel');
-    if (btnNewGlobal) btnNewGlobal.addEventListener('click', () => showFormView());
-    if (btnListGlobal) btnListGlobal.addEventListener('click', loadLaudos);
-    if (btnCancelGlobal) btnCancelGlobal.addEventListener('click', () => { editingId = null; showListView(); });
-    if (laudoForm) laudoForm.addEventListener('submit', async (e) => { e.preventDefault(); await saveOrUpdateLaudo(); });
-});
 
 function showFormView(id = null) {
     editingId = id;
@@ -643,12 +634,9 @@ async function saveOrUpdateLaudo() {
     const formData = {};
     for (let [key, value] of formDataObj.entries()) formData[key] = (typeof value === 'string') ? value.trim() : value;
 
-    // --- ALTERAÇÃO FOCADA AQUI ---
-    // Garante que altura e peso sejam salvos com duas casas decimais.
     if (formData.altura) {
         let alturaNum = parseFloat(String(formData.altura).replace(',', '.'));
         if (!isNaN(alturaNum)) {
-            // Converte cm para m se necessário e formata para duas casas decimais
             let alturaMetros = alturaNum > 3 ? alturaNum / 100 : alturaNum;
             formData.altura = alturaMetros.toFixed(2);
         }
@@ -656,17 +644,23 @@ async function saveOrUpdateLaudo() {
     if (formData.peso) {
         let pesoNum = parseFloat(String(formData.peso).replace(',', '.'));
         if (!isNaN(pesoNum)) {
-            formData.peso = pesoNum.toFixed(2); // Formata para duas casas decimais
+            formData.peso = pesoNum.toFixed(2);
         }
     }
 
     if (!formData.numero_processo || !formData.reclamante) { showNotification('Processo e Reclamante são obrigatórios.', 'error'); return; }
 
-    // --- ALTERAÇÃO AQUI: SALVANDO OS EXAMES ESPECÍFICOS ---
+    // CORREÇÃO: Salvando nos campos corretos
+    formData.quesitos_reclamante = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-reclamante-list')));
+    formData.quesitos_reclamada = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-reclamada-list')));
+    // REMOVIDO: Linha antiga que salvava quesitos_juizo
+    delete formData.quesitos_juizo;
+
     const examesEspecificosData = getExamesEspecificosFromDOM();
     if (examesEspecificosData) {
         formData.exames_especificos = JSON.stringify(examesEspecificosData);
     }
+    
     // --- FIM DA ALTERAÇÃO ---
 
     formData.fotos_paths = JSON.stringify(currentPhotoPaths);
@@ -710,18 +704,23 @@ const renderQuesitos = (container, quesitos) => {
 function populateForm(data) {
     if (!laudoForm) return;
     resetForm();
+
+    if (data.altura) data.altura = String(data.altura).replace('.', ',');
+    if (data.peso) data.peso = String(data.peso).replace('.', ',');
+
     Object.keys(data).forEach(key => {
         const element = document.getElementById(key);
-        // Evita tentar preencher o campo JSON diretamente
-        if (element && data[key] !== null && key !== 'exames_especificos') {
-            // Formata a altura ao carregar os dados
-            if (key === 'altura' && data[key]) {
-                element.value = formatarAltura(String(data[key]));
-            } else {
-                element.value = data[key];
-            }
+        if (element && data[key] !== null && !key.startsWith('quesitos_')) {
+            element.value = data[key];
         }
     });
+    
+    // CORRETO: Lendo dos campos corretos
+    const quesitosReclamante = data.quesitos_reclamante ? JSON.parse(data.quesitos_reclamante) : [];
+    renderQuesitos(document.getElementById('quesitos-reclamante-list'), quesitosReclamante);
+
+    const quesitosReclamada = data.quesitos_reclamada ? JSON.parse(data.quesitos_reclamada) : [];
+    renderQuesitos(document.getElementById('quesitos-reclamada-list'), quesitosReclamada);
     
     // --- ALTERAÇÃO AQUI: LENDO E PREENCHENDO OS EXAMES ESPECÍFICOS ---
     if (data.exames_especificos) {
@@ -779,11 +778,6 @@ function populateForm(data) {
     const passadoLaboral = data.passado_laboral ? JSON.parse(data.passado_laboral) : [];
     const passadoLaboralContainer = document.getElementById('passado-laboral-list');
     if (passadoLaboralContainer) passadoLaboralContainer.innerHTML = passadoLaboral.map(item => `<div class="passado-laboral-item"><input type="text" class="form-control form-control-sm laboral-empresa" placeholder="Empresa" value="${item.empresa || ''}"><input type="text" class="form-control form-control-sm laboral-funcao" placeholder="Função" value="${item.funcao || ''}"><input type="text" class="form-control form-control-sm laboral-periodo" placeholder="Período" value="${item.periodo || ''}"><button type="button" class="btn btn-danger btn-sm remove-btn remove-passado-laboral-btn">&times;</button></div>`).join('');
-
-    const quesitosJuizo = data.quesitos_juizo ? JSON.parse(data.quesitos_juizo) : [];
-    if (document.getElementById('quesitos-juizo-list')) {
-        renderQuesitos(document.getElementById('quesitos-juizo-list'), quesitosJuizo);
-    }
 
     const selectTipoExame = document.getElementById('tipo-exame-especifico');
     if (selectTipoExame && data.tipo_exame_especifico) {

@@ -22,6 +22,9 @@
     "rimraf": "^5.0.0"
   },
   "dependencies": {
+    "docxtemplater": "^3.66.3",
+    "docxtemplater-image-module": "^3.1.0",
+    "pizzip": "^3.2.0",
     "sqlite3": "^5.1.6"
   },
   "build": {
@@ -42,7 +45,9 @@
       {
         "from": "database/data",
         "to": "database/data",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {

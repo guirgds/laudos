@@ -4,6 +4,7 @@ const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const db = require('../../database/db');
+const { generateWordDocument } = require('./word-generator');
 
 let mainWindow;
 
@@ -150,14 +151,23 @@ ipcMain.handle('update-doenca', async (event, doencaData) => {
 ipcMain.handle('export-word', async (event, laudoData) => {
   try {
     const { filePath } = await dialog.showSaveDialog(mainWindow, {
-      defaultPath: `laudo-${laudoData.numero_processo || Date.now()}.docx`,
+      title: 'Salvar Laudo',
+      defaultPath: `laudo-${laudoData.reclamante.replace(/\s/g, '_') || 'laudo'}.docx`,
       filters: [{ name: 'Documentos Word', extensions: ['docx'] }],
     });
-    if (!filePath) return { success: false, error: 'Operação cancelada' };
-    console.log(`Salvar laudo em: ${filePath}`);
-    return { success: true, data: { path: filePath } };
+
+    if (!filePath) {
+      console.log('Operação de salvar foi cancelada.');
+      return { success: false, error: 'Operação cancelada' };
+    }
+
+    // Chama a função que gera o documento
+    await generateWordDocument(laudoData, filePath);
+
+    return { success: true, path: filePath };
+
   } catch (error) {
-    console.error(error);
+    console.error('Falha na exportação para Word:', error);
     return { success: false, error: error.message };
   }
 });
