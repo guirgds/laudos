@@ -78,12 +78,23 @@
                   <label for="conclusao" class="form-label">Conclusão:</label>
                   <textarea class="form-control" id="conclusao" name="conclusao" rows="5"></textarea>
                 </div>
+                <div class="col-12">
+                  <label for="apto_trabalho" class="form-label">Resultado da Aptidão:</label>
+                  <select class="form-select" id="apto_trabalho" name="apto_trabalho">
+                    <option selected value="">Selecione uma opção...</option>
+                    <option value="É considerado apto ao trabalho.">É considerado apto ao trabalho.</option>
+                    <option value="Não é considerado apto ao trabalho.">Não é considerado apto ao trabalho.</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <div class="card card-body"><h5 class="card-title">Respostas aos Quesitos</h5><div id="quesitos-group-container"></div></div>
+            <div class="card card-body">
+              <h5 class="card-title">Respostas aos Quesitos</h5>
+              <div id="quesitos-group-container"></div>
+            </div>
           </div>
           <div class="tab-pane fade" id="tab-finalizacao" role="tabpanel">
-             <div class="card card-body mb-3"><h5 class="card-title">Dados do Perito e Honorários</h5><div class="row g-3"><div class="col-md-6"><label for="perito" class="form-label">Perito:</label><input type="text" class="form-control" id="perito" name="perito" /></div><div class="col-md-6"><label for="crm" class="form-label">CRM:</label><input type="text" class="form-control" id="crm" name="crm" /></div><div class="col-md-6"><label for="valor_honorarios" class="form-label">Valor de Honorários (R$):</label><input type="text" class="form-control" id="valor_honorarios" name="valor_honorarios" /></div><div class="col-md-6"><label for="valor_por_extenso" class="form-label">Valor por Extenso:</label><input type="text" class="form-control" id="valor_por_extenso" name="valor_por_extenso" readonly /></div></div></div>
+            <div class="card card-body mb-3"><h5 class="card-title">Dados do Perito e Honorários</h5><div class="row g-3"><div class="col-md-6"><label for="perito" class="form-label">Perito:</label><input type="text" class="form-control" id="perito" name="perito" /></div><div class="col-md-6"><label for="crm" class="form-label">CRM:</label><input type="text" class="form-control" id="crm" name="crm" /></div><div class="col-md-6"><label for="valor_honorarios" class="form-label">Valor de Honorários (R$):</label><input type="text" class="form-control" id="valor_honorarios" name="valor_honorarios" /></div><div class="col-md-6"><label for="valor_por_extenso" class="form-label">Valor por Extenso:</label><input type="text" class="form-control" id="valor_por_extenso" name="valor_por_extenso" readonly /></div></div></div>
             <div class="card card-body"><h5 class="card-title">Datas</h5><div class="row g-3"><div class="col-md-4"><label for="data_pericia" class="form-label">Data da Perícia:</label><input type="date" class="form-control" id="data_pericia" name="data_pericia" /></div><div class="col-md-4"><label for="hora_pericia" class="form-label">Hora da Perícia:</label><input type="time" class="form-control" id="hora_pericia" name="hora_pericia" /></div><div class="col-md-4"><label for="data_laudo" class="form-label">Data do Laudo:</label><input type="date" class="form-control" id="data_laudo" name="data_laudo" /></div></div></div>
           </div>
           <div class="form-actions mt-4 text-end">
