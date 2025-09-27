@@ -6,19 +6,11 @@ const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 const ImageModule = require('docxtemplater-image-module');
 
-/**
- * Função para formatar a data por extenso
- * Converte 'YYYY-MM-DD' para 'dd de mês de yyyy'.
- * @param {string} dateString - A data no formato YYYY-MM-DD.
- * @returns {string} - A data formatada.
- */
 function formatDateToExtensive(dateString) {
   if (!dateString) return '';
-  // Corrige o problema de fuso horário que pode alterar o dia
   const date = new Date(dateString);
   const offset = date.getTimezoneOffset() * 60000;
   const correctedDate = new Date(date.getTime() + offset);
-
   return correctedDate.toLocaleDateString('pt-BR', {
     year: 'numeric',
     month: 'long',
@@ -34,12 +26,8 @@ function generateWordDocument(data, outputPath) {
 
       const imageOpts = {
         centered: false,
-        getImage: function(tagValue) {
-          return fs.readFileSync(tagValue);
-        },
-        getSize: function() {
-          return [450, 300];
-        },
+        getImage: (tagValue) => fs.readFileSync(tagValue),
+        getSize: () => [450, 300],
       };
 
       const zip = new PizZip(content);
@@ -55,17 +43,33 @@ function generateWordDocument(data, outputPath) {
         try {
           renderData.fotos = JSON.parse(renderData.fotos_paths);
         } catch (e) {
-          console.error("Erro ao processar os caminhos das fotos:", e);
           renderData.fotos = [];
         }
       }
       
-      // --- ALTERAÇÃO AQUI: Formatando APENAS a data do laudo ---
       if (renderData.data_laudo) {
-        // Adiciona a cidade antes da data formatada
         renderData.data_laudo = `Porto Alegre, ${formatDateToExtensive(renderData.data_laudo)}`;
       }
-      // --- FIM DA ALTERAÇÃO ---
+      
+      // Lógica completa e correta para todos os quesitos
+      try {
+        const parseQuesitos = (quesitosStr) => {
+          if (!quesitosStr) return [];
+          const quesitos = JSON.parse(quesitosStr);
+          // Filtra itens que são completamente vazios
+          return quesitos.filter(q => q.pergunta || q.resposta);
+        };
+        
+        renderData.quesitos_juizo = parseQuesitos(renderData.quesitos_juizo);
+        renderData.quesitos_reclamante = parseQuesitos(renderData.quesitos_reclamante);
+        renderData.quesitos_reclamada = parseQuesitos(renderData.quesitos_reclamada);
+
+      } catch (e) {
+        console.error("Erro ao processar quesitos:", e);
+        renderData.quesitos_juizo = [];
+        renderData.quesitos_reclamante = [];
+        renderData.quesitos_reclamada = [];
+      }
 
       doc.setData(renderData);
       doc.render();
@@ -76,7 +80,7 @@ function generateWordDocument(data, outputPath) {
       console.log(`Documento gerado com sucesso em: ${outputPath}`);
       resolve({ success: true, path: outputPath });
 
-    } catch (error) {
+    } catch (error)      {
       console.error("Erro ao gerar o documento Word:", error);
       reject(error);
     }

@@ -3,16 +3,14 @@
 // --- VARIÁVEIS GLOBAIS ---
 let editingId = null;
 let currentPhotoPaths = [];
-let DADOS_DOENCAS = {}; // Armazena as doenças e testes carregados do banco de dados
+let DADOS_DOENCAS = {};
 
-// --- ELEMENTOS DA INTERFACE (serão buscados no DOMContentLoaded) ---
+// --- ELEMENTOS DA INTERFACE ---
 let listView, formView, loadingView, laudosList, btnNew, btnList, btnCancel, laudoForm, btnManageDoencas, modalDoencasElement, modalDoencas, doencasManagementContent;
 
 // --- FUNÇÕES AUXILIARES ---
-// NOVA FUNÇÃO PARA CONVERTER NÚMERO PARA VALOR POR EXTENSO
 function numeroParaExtenso(numero) {
     if (numero === null || numero === undefined) return '';
-    
     const porExtenso = {
         centavos: { 1: 'um centavo', 2: 'dois centavos', default: 'centavos' },
         reais: { 1: 'um real', 2: 'dois reais', default: 'reais' },
@@ -21,7 +19,6 @@ function numeroParaExtenso(numero) {
         centenas: ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'],
         milhares: { 1: 'mil', default: 'mil' }
     };
-
     function getExtenso(n, isMilhar = false) {
         if (isNaN(n) || n === 0) return '';
         if (n < 20) return porExtenso.unidades[n];
@@ -38,10 +35,8 @@ function numeroParaExtenso(numero) {
         }
         return '';
     }
-
     const [reais, centavos] = parseFloat(numero).toFixed(2).split('.').map(Number);
     let strReais = '', strCentavos = '';
-
     if (reais > 0) {
         if (reais >= 1000) {
             const mil = Math.floor(reais / 1000);
@@ -55,17 +50,14 @@ function numeroParaExtenso(numero) {
         const plural = reais > 1 ? porExtenso.reais.default : porExtenso.reais[1];
         strReais += ' ' + plural;
     }
-
     if (centavos > 0) {
         strCentavos = getExtenso(centavos);
         const plural = centavos > 1 ? porExtenso.centavos.default : porExtenso.centavos[1];
         strCentavos += ' ' + plural;
     }
-    
     if (reais > 0 && centavos > 0) return strReais + ' e ' + strCentavos;
     if (reais > 0) return strReais;
     if (centavos > 0) return strCentavos;
-    
     return 'zero reais';
 }
 
@@ -75,6 +67,7 @@ function formatDate(dateString) {
     const offset = date.getTimezoneOffset() * 60000;
     return new Date(date.getTime() + offset).toLocaleDateString('pt-BR');
 }
+
 function showNotification(message, type) {
     const existing = document.querySelectorAll('.notification');
     existing.forEach(n => n.remove());
@@ -85,25 +78,20 @@ function showNotification(message, type) {
     setTimeout(() => notification.remove(), 4000);
 }
 
-// --- FUNÇÃO PARA FORMATAR ALTURA ---
 function formatarAltura(valor) {
     if (!valor) return '';
     const numeros = String(valor).replace(/\D/g, '');
     if (numeros.length === 0) return '';
-    
     if (numeros.length === 1) return `0,0${numeros}`;
     if (numeros.length === 2) return `0,${numeros}`;
-    
     const metros = numeros.slice(0, -2);
     const centimetros = numeros.slice(-2);
     return `${metros},${centimetros}`;
 }
 
-// --- CARREGAMENTO ROBUSTO DO IMASK ---
 function loadIMaskOnce() {
     return new Promise((resolve, reject) => {
         if (window.IMask) {
-            console.log('[IMask] já disponível em window.IMask');
             return resolve(window.IMask);
         }
         const sources = ['js/imask.min.js', 'https://unpkg.com/imask'];
@@ -111,22 +99,18 @@ function loadIMaskOnce() {
         function tryLoad() {
             if (i >= sources.length) return reject(new Error('Não foi possível carregar IMask de nenhuma fonte.'));
             const src = sources[i++];
-            console.log(`[IMask] tentando carregar ${src}`);
             const s = document.createElement('script');
             s.src = src;
             s.onload = () => {
                 setTimeout(() => {
                     if (window.IMask) {
-                        console.log('[IMask] carregado com sucesso de', src);
                         resolve(window.IMask);
                     } else {
-                        console.warn('[IMask] script carregado mas window.IMask indefinido, tentando próximo...');
                         tryLoad();
                     }
                 }, 50);
             };
             s.onerror = () => {
-                console.warn('[IMask] erro ao carregar', src);
                 tryLoad();
             };
             document.head.appendChild(s);
@@ -140,15 +124,14 @@ function setupQuesitosUI() {
     if (!container) return;
     const quesitoTemplate = (type, title) => `<div class="mb-3"><h5>${title}</h5><div id="quesitos-${type}-list" class="quesitos-list"></div><button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-type="${type}">Adicionar Pergunta</button></div>`;
     
-    // CORREÇÃO: Cria as seções para Reclamante e Reclamada
-    container.innerHTML = quesitoTemplate('reclamante', 'Quesitos do Reclamante');
+    // CORREÇÃO: Ordem e lógica corrigidas
+    container.innerHTML = quesitoTemplate('juizo', 'Quesitos do Juízo');
+    container.innerHTML += quesitoTemplate('reclamante', 'Quesitos do Reclamante');
     container.innerHTML += quesitoTemplate('reclamada', 'Quesitos da Reclamada');
 }
 
-// --- LÓGICA DE GERENCIAMENTO DE DOENÇAS ---
 const renderDoencasManagement = () => {
     if (!doencasManagementContent) return;
-    
     const existingDoencasHtml = Object.keys(DADOS_DOENCAS).map(nome => {
         const doenca = DADOS_DOENCAS[nome];
         const doencaId = doenca.id;
@@ -159,13 +142,10 @@ const renderDoencasManagement = () => {
                 <div class="col-md-2 text-end"><button type="button" class="btn btn-sm btn-outline-danger remove-teste-field">Remover</button></div>
             </div>
         `).join('');
-
         return `
         <div class="accordion-item">
             <h2 class="accordion-header" id="heading-${doencaId}">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${doencaId}">
-                    ${nome}
-                </button>
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${doencaId}">${nome}</button>
             </h2>
             <div id="collapse-${doencaId}" class="accordion-collapse collapse" data-bs-parent="#existing-doencas-accordion">
                 <div class="accordion-body">
@@ -185,13 +165,10 @@ const renderDoencasManagement = () => {
         </div>
         `;
     }).join('');
-
     doencasManagementContent.innerHTML = `
         <div class="mb-4">
             <h4>Doenças Cadastradas</h4>
-            <div class="accordion" id="existing-doencas-accordion">
-                ${existingDoencasHtml || '<p class="text-muted">Nenhuma doença cadastrada.</p>'}
-            </div>
+            <div class="accordion" id="existing-doencas-accordion">${existingDoencasHtml || '<p class="text-muted">Nenhuma doença cadastrada.</p>'}</div>
         </div>
         <hr>
         <h4>Adicionar Nova Doença</h4>
@@ -207,14 +184,11 @@ const renderDoencasManagement = () => {
 
 function attachDoencasModalHandlers() {
     if (!btnManageDoencas || !modalDoencas) return;
-
     btnManageDoencas.addEventListener('click', () => {
         renderDoencasManagement();
         modalDoencas.show();
     });
-
     if (!modalDoencasElement) return;
-
     modalDoencasElement.addEventListener('click', async (e) => {
         const addTesteField = (container) => {
             const newRow = document.createElement('div');
@@ -227,7 +201,6 @@ function attachDoencasModalHandlers() {
             container.appendChild(newRow);
             newRow.querySelector('.teste-label').focus();
         };
-
         if (e.target.id === 'btn-add-teste-field') {
             addTesteField(document.getElementById('new-testes-container'));
         }
@@ -237,7 +210,6 @@ function attachDoencasModalHandlers() {
         if (e.target.classList.contains('remove-teste-field')) {
             e.target.closest('.teste-row').remove();
         }
-
         if (e.target.classList.contains('save-doenca-changes-btn')) {
             const form = e.target.closest('.edit-doenca-form');
             const data = {
@@ -249,7 +221,6 @@ function attachDoencasModalHandlers() {
                 })).filter(t => t.label)
             };
             if (!data.nome) return alert('O nome da doença é obrigatório.');
-            
             const result = await window.electronAPI.updateDoenca(data);
             if (result.success) {
                 showNotification('Doença atualizada!', 'success');
@@ -259,7 +230,6 @@ function attachDoencasModalHandlers() {
                 alert('Erro ao atualizar: ' + result.error);
             }
         }
-        
         if (e.target.classList.contains('delete-doenca-btn')) {
             if (!confirm('Tem certeza que deseja excluir esta doença e todos os seus testes?')) return;
             const doencaId = e.target.closest('.edit-doenca-form').dataset.doencaId;
@@ -273,13 +243,11 @@ function attachDoencasModalHandlers() {
             }
         }
     });
-
     modalDoencasElement.addEventListener('submit', async (e) => {
         if (e.target.id === 'form-add-doenca') {
             e.preventDefault();
             const nome = document.getElementById('new-doenca-name').value.trim();
             if (!nome) return alert('O nome da doença é obrigatório.');
-            
             const data = {
                 nome: nome,
                 testes: Array.from(document.querySelectorAll('#new-testes-container .teste-row')).map(row => ({
@@ -287,7 +255,6 @@ function attachDoencasModalHandlers() {
                     placeholder: row.querySelector('.teste-placeholder').value.trim()
                 })).filter(t => t.label)
             };
-            
             const result = await window.electronAPI.saveDoenca(data);
             if (result.success) {
                 showNotification('Doença salva!', 'success');
@@ -300,7 +267,6 @@ function attachDoencasModalHandlers() {
     });
 }
 
-// --- LÓGICA DE CARREGAMENTO ---
 async function loadDoencas() {
     const result = await window.electronAPI.getDoencas();
     if (result.success) {
@@ -325,9 +291,7 @@ function populateDoencasDropdown() {
     select.value = currentValue;
 }
 
-// --- INICIALIZAÇÃO E EVENTOS PRINCIPAIS (ESTRUTURA CORRIGIDA) ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Atribui elementos globais
     listView = document.getElementById('list-view');
     formView = document.getElementById('form-view');
     loadingView = document.getElementById('loading-view');
@@ -340,22 +304,15 @@ document.addEventListener('DOMContentLoaded', () => {
     modalDoencasElement = document.getElementById('modal-doencas');
     modalDoencas = modalDoencasElement ? new bootstrap.Modal(modalDoencasElement) : null;
     doencasManagementContent = document.getElementById('doencas-management-content');
-
     const yearSpan = document.getElementById('year');
     if (yearSpan) yearSpan.textContent = new Date().getFullYear();
-
-    // 2. Anexa todos os handlers de eventos
     attachDoencasModalHandlers();
     btnNew.addEventListener('click', () => showFormView());
     btnList.addEventListener('click', loadLaudos);
     btnCancel.addEventListener('click', () => { editingId = null; showListView(); });
     laudoForm.addEventListener('submit', async (e) => { e.preventDefault(); await saveOrUpdateLaudo(); });
-    
-    // 3. Carrega os dados iniciais
     loadLaudos();
     loadDoencas();
-
-    // 4. Configura as lógicas do formulário
     setupFormLogic();
 });
 
@@ -364,7 +321,7 @@ function setupFormLogic() {
         processo: document.getElementById('numero_processo'),
         cpf: document.getElementById('cpf'),
         valorHonorarios: document.getElementById('valor_honorarios'),
-        valorPorExtenso: document.getElementById('valor_por_extenso'), // Adicionado
+        valorPorExtenso: document.getElementById('valor_por_extenso'),
         dataNascimento: document.getElementById('data_nascimento'),
         idade: document.getElementById('idade'),
         peso: document.getElementById('peso'),
@@ -380,12 +337,10 @@ function setupFormLogic() {
         selectTipoExame: document.getElementById('tipo-exame-especifico'),
         examesEspecificosContainer: document.getElementById('exames-especificos-container')
     };
-
      loadIMaskOnce().then((IMaskLib) => {
         try {
             if (inputs.processo) IMaskLib(inputs.processo, { mask: '0000000-00.0000.0.00.0000' });
             if (inputs.cpf) IMaskLib(inputs.cpf, { mask: '000.000.000-00' });
-            
             const numberMaskOptions = {
                 mask: Number,
                 scale: 2,
@@ -394,18 +349,14 @@ function setupFormLogic() {
                 radix: ',',
                 mapToRadix: ['.']
             };
-
-            // --- ALTERAÇÃO AQUI: máscara de honorários corrigida ---
             if (inputs.valorHonorarios) {
                 IMaskLib(inputs.valorHonorarios, {
                     ...numberMaskOptions,
                     thousandsSeparator: '.',
-                    padFractionalZeros: true // <-- Isso força a exibição do ",00"
+                    padFractionalZeros: true
                 });
             }
-
             if (inputs.peso) IMaskLib(inputs.peso, numberMaskOptions);
-
             if (inputs.altura) {
                 IMaskLib(inputs.altura, {
                     mask: function (value) {
@@ -424,27 +375,21 @@ function setupFormLogic() {
                     }
                 });
             }
-
         } catch (err) {
             console.error('[renderer] erro aplicando máscaras:', err);
-            showNotification('Erro ao aplicar máscaras: ' + err.message, 'error');
         }
     }).catch(err => {
         console.error('[renderer] falha ao carregar IMask:', err);
-        showNotification('A biblioteca de máscaras não pôde ser carregada.', 'error');
     });
 
-    // --- ALTERAÇÃO AQUI: Lógica para preencher valor por extenso ---
     if (inputs.valorHonorarios && inputs.valorPorExtenso) {
         inputs.valorHonorarios.addEventListener('blur', (event) => {
             const valor = event.target.value;
-            // Converte o valor formatado (ex: "1.800,00") para um número (ex: 1800.00)
             const numero = parseFloat(valor.replace(/\./g, '').replace(',', '.'));
-            
             if (!isNaN(numero)) {
                 inputs.valorPorExtenso.value = numeroParaExtenso(numero);
             } else {
-                inputs.valorPorExtenso.value = ''; // Limpa o campo se o valor for inválido
+                inputs.valorPorExtenso.value = '';
             }
         });
     }
@@ -486,23 +431,6 @@ function setupFormLogic() {
         });
     }
 
-    // EVENTOS ADICIONAIS PARA FORMATAR ALTURA
-    if (inputs.altura) {
-        // Formata quando o campo perde o foco
-        inputs.altura.addEventListener('blur', function() {
-            this.value = formatarAltura(this.value);
-            calcularIMC(); // Recalcula o IMC após formatar
-        });
-        
-        // Formata quando o campo é alterado (opcional)
-        inputs.altura.addEventListener('input', function() {
-            // Formata em tempo real se o usuário digitar vírgula
-            if (this.value.includes(',')) {
-                this.value = formatarAltura(this.value);
-            }
-        });
-    }
-
     if (inputs.selectTipoExame) {
         inputs.selectTipoExame.addEventListener('change', (e) => {
             const selectedKey = e.target.value;
@@ -526,14 +454,11 @@ function setupFormLogic() {
 
     if (inputs.btnAddPhoto) {
         inputs.btnAddPhoto.addEventListener('click', async () => {
-            if (window.electronAPI && typeof window.electronAPI.selectPhotos === 'function') {
-                const result = await window.electronAPI.selectPhotos();
-                if (result && result.success) { currentPhotoPaths.push(...result.paths); renderPhotos(); }
-            } else {
-                showNotification('selectPhotos não disponível.', 'error');
-            }
+            const result = await window.electronAPI.selectPhotos();
+            if (result && result.success) { currentPhotoPaths.push(...result.paths); renderPhotos(); }
         });
     }
+
     if (inputs.photosPreviewContainer) {
         inputs.photosPreviewContainer.addEventListener('click', (e) => {
             if (e.target.classList.contains('remove-photo-btn')) {
@@ -549,9 +474,10 @@ function setupFormLogic() {
             newExame.className = 'exame-item';
             newExame.innerHTML = `<textarea class="form-control form-control-sm exame-descricao" rows="2" placeholder="Ex: Audiometria de DD/MM/AAAA..."></textarea><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button>`;
             if (inputs.examesListContainer) inputs.examesListContainer.appendChild(newExame);
-            newExame.querySelector('input').focus();
+            newExame.querySelector('textarea').focus();
         });
     }
+
     if (inputs.examesListContainer) {
         inputs.examesListContainer.addEventListener('click', (e) => {
             if (e.target.classList.contains('remove-exame-btn')) e.target.closest('.exame-item').remove();
@@ -567,6 +493,7 @@ function setupFormLogic() {
             newEntry.querySelector('.laboral-empresa').focus();
         });
     }
+
     if (inputs.passadoLaboralList) {
         inputs.passadoLaboralList.addEventListener('click', (e) => {
             if (e.target.classList.contains('remove-passado-laboral-btn')) e.target.closest('.passado-laboral-item').remove();
@@ -592,43 +519,40 @@ function setupFormLogic() {
     }
 };
 
-// --- FUNÇÕES GLOBAIS DE CONTROLE ---
 function safeGet(id){ return document.getElementById(id); }
+
 const getQuesitosFromDOM = (container) => {
     if (!container) return [];
     return Array.from(container.querySelectorAll('.quesito-item')).map(item => ({ pergunta: item.querySelector('.quesito-pergunta').value, resposta: item.querySelector('.quesito-resposta').value }));
 };
+
 const getExamesFromDOM = () => {
     const container = safeGet('exames-list-container');
     if (!container) return [];
     return Array.from(container.querySelectorAll('.exame-item')).map(item => ({ descricao: item.querySelector('.exame-descricao').value }));
 };
+
 const getPassadoLaboralFromDOM = () => {
     const container = safeGet('passado-laboral-list');
     if (!container) return [];
     return Array.from(container.querySelectorAll('.passado-laboral-item')).map(item => ({ empresa: item.querySelector('.laboral-empresa').value, funcao: item.querySelector('.laboral-funcao').value, periodo: item.querySelector('.laboral-periodo').value }));
 };
 
-// --- NOVA FUNÇÃO PARA COLETAR DADOS DOS EXAMES ESPECÍFICOS ---
 function getExamesEspecificosFromDOM() {
     const container = document.getElementById('exames-especificos-container');
     const modeloSelecionado = document.getElementById('tipo-exame-especifico').value;
-    
     if (!container || !modeloSelecionado || container.children.length === 0) {
         return null;
     }
-
     const testes = {};
     const inputs = container.querySelectorAll('input.form-control');
     inputs.forEach(input => {
-        // Encontra a label associada pelo atributo 'for' que corresponde ao id do input
         const labelElement = document.querySelector(`label[for="${input.id}"]`);
         if (labelElement) {
             const label = labelElement.textContent;
             testes[label] = input.value;
         }
     });
-
     return {
         modelo: modeloSelecionado,
         testes: testes
@@ -642,12 +566,14 @@ function showFormView(id = null) {
     if (loadingView) loadingView.classList.add('d-none');
     if (id) { loadLaudoForEditing(id); } else { resetForm(); }
 }
+
 function showListView() {
     if (listView) listView.style.display = 'block';
     if (formView) formView.style.display = 'none';
     if (loadingView) loadingView.classList.add('d-none');
     resetForm();
 }
+
 function showLoading() {
     if (listView) listView.style.display = 'none';
     if (formView) formView.style.display = 'none';
@@ -660,13 +586,9 @@ function showLoading() {
 async function loadLaudos() {
     showLoading();
     try {
-        if (window.electronAPI && typeof window.electronAPI.loadLaudos === 'function') {
-            const result = await window.electronAPI.loadLaudos();
-            if (result.success) renderLaudosList(result.data);
-            else showNotification('Erro ao carregar: ' + result.error, 'error');
-        } else {
-            renderLaudosList([]);
-        }
+        const result = await window.electronAPI.loadLaudos();
+        if (result.success) renderLaudosList(result.data);
+        else showNotification('Erro ao carregar: ' + result.error, 'error');
     } catch (error) {
         showNotification('Erro ao carregar: ' + error.message, 'error');
     }
@@ -676,31 +598,45 @@ async function loadLaudos() {
 async function loadLaudoForEditing(id) {
     showLoading();
     try {
-        if (window.electronAPI && typeof window.electronAPI.getLaudo === 'function') {
-            const result = await window.electronAPI.getLaudo(id);
-            if (result.success) { populateForm(result.data); showFormView(id); }
-            else { showNotification('Erro ao carregar laudo: ' + result.error, 'error'); showListView(); }
-        } else {
-            showNotification('getLaudo não disponível.', 'error');
-            showListView();
-        }
+        const result = await window.electronAPI.getLaudo(id);
+        if (result.success) { populateForm(result.data); showFormView(id); }
+        else { showNotification('Erro ao carregar laudo: ' + result.error, 'error'); showListView(); }
     } catch (error) {
         showNotification('Erro ao carregar laudo: ' + error.message, 'error');
         showListView();
     }
 }
+
 async function deleteLaudo(id) {
     if (!confirm('Tem certeza?')) return;
     showLoading();
     try {
-        if (window.electronAPI && typeof window.electronAPI.deleteLaudo === 'function') {
-            const result = await window.electronAPI.deleteLaudo(id);
-            if (result.success) { showNotification('Laudo excluído!', 'success'); loadLaudos(); }
-            else { showNotification('Erro ao excluir: ' + result.error, 'error'); }
-        } else showNotification('deleteLaudo não disponível.', 'error');
+        const result = await window.electronAPI.deleteLaudo(id);
+        if (result.success) { showNotification('Laudo excluído!', 'success'); loadLaudos(); }
+        else { showNotification('Erro ao excluir: ' + result.error, 'error'); }
     } catch (error) {
         showNotification('Erro ao excluir: ' + error.message, 'error');
     }
+}
+
+async function exportLaudo(id) {
+    showLoading();
+    try {
+        const laudoResult = await window.electronAPI.getLaudo(id);
+        if (laudoResult.success) {
+            const exportResult = await window.electronAPI.exportWord(laudoResult.data);
+            if (exportResult.success) {
+                showNotification('Laudo exportado com sucesso!', 'success');
+            } else {
+                showNotification('Exportação cancelada ou falhou: ' + exportResult.error, 'error');
+            }
+        } else {
+            showNotification('Não foi possível carregar os dados do laudo para exportar.', 'error');
+        }
+    } catch (error) {
+        showNotification('Ocorreu um erro na exportação: ' + error.message, 'error');
+    }
+    showListView();
 }
 
 async function saveOrUpdateLaudo() {
@@ -725,37 +661,25 @@ async function saveOrUpdateLaudo() {
 
     if (!formData.numero_processo || !formData.reclamante) { showNotification('Processo e Reclamante são obrigatórios.', 'error'); return; }
 
-    // CORREÇÃO: Salvando nos campos corretos
     formData.quesitos_reclamante = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-reclamante-list')));
     formData.quesitos_reclamada = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-reclamada-list')));
-    // REMOVIDO: Linha antiga que salvava quesitos_juizo
-    delete formData.quesitos_juizo;
-
+    formData.quesitos_juizo = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-juizo-list')));
+    
     const examesEspecificosData = getExamesEspecificosFromDOM();
     if (examesEspecificosData) {
         formData.exames_especificos = JSON.stringify(examesEspecificosData);
     }
     
-    // --- FIM DA ALTERAÇÃO ---
-
     formData.fotos_paths = JSON.stringify(currentPhotoPaths);
-    formData.quesitos_juizo = JSON.stringify(getQuesitosFromDOM(document.getElementById('quesitos-juizo-list')));
     formData.exames_complementares = JSON.stringify(getExamesFromDOM());
     formData.passado_laboral = JSON.stringify(getPassadoLaboralFromDOM());
 
     showLoading();
     try {
         if (editingId) formData.id = editingId;
-        if (window.electronAPI && typeof window.electronAPI.saveLaudo === 'function') {
-            const result = await window.electronAPI.saveLaudo(formData);
-            if (result.success) { showNotification('Laudo salvo!', 'success'); editingId = null; loadLaudos(); }
-            else { showNotification('Erro ao salvar: ' + result.error, 'error'); showFormView(editingId); }
-        } else {
-            console.warn('saveLaudo não disponível; simulando salvamento.');
-            showNotification('Laudo (simulado) salvo!', 'success');
-            editingId = null;
-            loadLaudos();
-        }
+        const result = await window.electronAPI.saveLaudo(formData);
+        if (result.success) { showNotification('Laudo salvo!', 'success'); editingId = null; loadLaudos(); }
+        else { showNotification('Erro ao salvar: ' + result.error, 'error'); showFormView(editingId); }
     } catch (error) {
         showNotification('Erro ao salvar: ' + error.message, 'error');
         showFormView(editingId);
@@ -768,7 +692,22 @@ function renderLaudosList(laudos) {
         return;
     }
     if (!laudosList) return;
-    laudosList.innerHTML = laudos.map(laudo => `<div class="col-lg-4 col-md-6"><div class="card h-100"><div class="card-body"><h5 class="card-title">${laudo.numero_processo || 'N/A'}</h5><p class="card-text"><strong>Reclamante:</strong> ${laudo.reclamante || 'N/A'}</p><p class="card-text"><small class="text-muted">Data: ${formatDate(laudo.data_laudo)}</small></p></div><div class="card-footer bg-transparent border-top-0 text-end"><button class="btn btn-sm btn-outline-primary" onclick="showFormView(${laudo.id})">Editar</button><button class="btn btn-sm btn-outline-danger" onclick="deleteLaudo(${laudo.id})">Excluir</button></div></div></div>`).join('');
+    laudosList.innerHTML = laudos.map(laudo => `
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">${laudo.numero_processo || 'N/A'}</h5>
+                    <p class="card-text"><strong>Reclamante:</strong> ${laudo.reclamante || 'N/A'}</p>
+                    <p class="card-text"><small class="text-muted">Data: ${formatDate(laudo.data_laudo)}</small></p>
+                </div>
+                <div class="card-footer bg-transparent border-top-0 text-end">
+                    <button class="btn btn-sm btn-outline-success me-2" onclick="exportLaudo(${laudo.id})">Exportar</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="showFormView(${laudo.id})">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteLaudo(${laudo.id})">Excluir</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
 }
 
 const renderQuesitos = (container, quesitos) => {
@@ -790,28 +729,25 @@ function populateForm(data) {
         }
     });
     
-    // CORRETO: Lendo dos campos corretos
+    const quesitosJuizo = data.quesitos_juizo ? JSON.parse(data.quesitos_juizo) : [];
+    renderQuesitos(document.getElementById('quesitos-juizo-list'), quesitosJuizo);
+
     const quesitosReclamante = data.quesitos_reclamante ? JSON.parse(data.quesitos_reclamante) : [];
     renderQuesitos(document.getElementById('quesitos-reclamante-list'), quesitosReclamante);
 
     const quesitosReclamada = data.quesitos_reclamada ? JSON.parse(data.quesitos_reclamada) : [];
     renderQuesitos(document.getElementById('quesitos-reclamada-list'), quesitosReclamada);
     
-    // --- ALTERAÇÃO AQUI: LENDO E PREENCHENDO OS EXAMES ESPECÍFICOS ---
     if (data.exames_especificos) {
         try {
             const examesData = JSON.parse(data.exames_especificos);
             const select = document.getElementById('tipo-exame-especifico');
-
             if (select && examesData.modelo) {
                 select.value = examesData.modelo;
-                select.dispatchEvent(new Event('change')); // Isso renderiza os campos corretos
-
-                // Espera um pouco para os campos serem criados no DOM e depois preenche
+                select.dispatchEvent(new Event('change'));
                 setTimeout(() => {
                     if (examesData.testes) {
                         for (const [label, value] of Object.entries(examesData.testes)) {
-                            // Encontra o input pelo texto da sua label associada
                             const allLabels = document.querySelectorAll('#exames-especificos-container label');
                             const targetLabel = Array.from(allLabels).find(l => l.textContent === label);
                             if (targetLabel) {
@@ -829,10 +765,9 @@ function populateForm(data) {
             console.error("Erro ao processar dados de exames específicos:", e);
         }
     }
-    // --- FIM DA ALTERAÇÃO ---
-
 
     if (document.getElementById('data_nascimento') && document.getElementById('data_nascimento').value) document.getElementById('data_nascimento').dispatchEvent(new Event('change'));
+    
     if ((document.getElementById('peso') && document.getElementById('peso').value) || (document.getElementById('altura') && document.getElementById('altura').value)) {
         if (document.getElementById('altura')) document.getElementById('altura').dispatchEvent(new Event('input'));
     }
