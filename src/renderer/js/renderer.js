@@ -472,7 +472,7 @@ function setupFormLogic() {
         inputs.btnAddExame.addEventListener('click', () => {
             const newExame = document.createElement('div');
             newExame.className = 'exame-item';
-            newExame.innerHTML = `<input type="text" class="form-control form-control-sm exame-descricao" placeholder="Ex: Audiometria de DD/MM/AAAA..."><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button>`;
+            newExame.innerHTML = `<textarea class="form-control form-control-sm exame-descricao" rows="2" placeholder="Ex: Audiometria de DD/MM/AAAA..."></textarea><button type="button" class="btn btn-danger btn-sm remove-btn remove-exame-btn">&times;</button>`;
             if (inputs.examesListContainer) inputs.examesListContainer.appendChild(newExame);
             newExame.querySelector('input').focus();
         });
