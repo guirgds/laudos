@@ -812,4 +812,5 @@ function resetForm() {
     if (document.getElementById('data_pericia')) document.getElementById('data_pericia').value = today;
     if (document.getElementById('data_laudo')) document.getElementById('data_laudo').value = today;
     if (document.getElementById('hora_pericia')) document.getElementById('hora_pericia').value = `${hours}:${minutes}`;
+    if (document.getElementById('perito')) document.getElementById('perito').value = 'João Alberto Maeso Montes';
 }

@@ -6,40 +6,53 @@ const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 const ImageModule = require('docxtemplater-image-module');
 
+/**
+ * Função para formatar a data por extenso
+ * Converte 'YYYY-MM-DD' para 'dd de mês de yyyy'.
+ * @param {string} dateString - A data no formato YYYY-MM-DD.
+ * @returns {string} - A data formatada.
+ */
+function formatDateToExtensive(dateString) {
+  if (!dateString) return '';
+  // Corrige o problema de fuso horário que pode alterar o dia
+  const date = new Date(dateString);
+  const offset = date.getTimezoneOffset() * 60000;
+  const correctedDate = new Date(date.getTime() + offset);
+
+  return correctedDate.toLocaleDateString('pt-BR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 function generateWordDocument(data, outputPath) {
   return new Promise((resolve, reject) => {
     try {
       const templatePath = path.join(__dirname, '../../assets/molde-laudo.docx');
       const content = fs.readFileSync(templatePath, 'binary');
 
-      // --- CONFIGURAÇÃO DO MÓDULO DE IMAGEM ---
       const imageOpts = {
-        centered: false, // As imagens não serão centralizadas por padrão
-        getImage: function(tagValue, tagName) {
-          // tagValue é o caminho do arquivo da imagem (ex: C:\Users\...)
+        centered: false,
+        getImage: function(tagValue) {
           return fs.readFileSync(tagValue);
         },
-        getSize: function(img, tagValue, tagName) {
-          // Define o tamanho da imagem no documento. [Largura, Altura] em pixels.
-          // Você pode ajustar estes valores como desejar.
-          return [450, 300]; 
-        }
+        getSize: function() {
+          return [450, 300];
+        },
       };
 
       const zip = new PizZip(content);
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
-        modules: [new ImageModule(imageOpts)] // Anexa o módulo de imagem
+        modules: [new ImageModule(imageOpts)],
       });
 
-      // Prepara os dados
       const renderData = { ...data };
 
-      // Converte a string JSON de fotos de volta para um array de caminhos
       if (renderData.fotos_paths) {
         try {
-          // Cria um novo campo 'fotos' que o docxtemplater usará para o loop
           renderData.fotos = JSON.parse(renderData.fotos_paths);
         } catch (e) {
           console.error("Erro ao processar os caminhos das fotos:", e);
@@ -47,8 +60,12 @@ function generateWordDocument(data, outputPath) {
         }
       }
       
-      // Formata datas
-      // ... (seu código de formatação de datas existente) ...
+      // --- ALTERAÇÃO AQUI: Formatando APENAS a data do laudo ---
+      if (renderData.data_laudo) {
+        // Adiciona a cidade antes da data formatada
+        renderData.data_laudo = `Porto Alegre, ${formatDateToExtensive(renderData.data_laudo)}`;
+      }
+      // --- FIM DA ALTERAÇÃO ---
 
       doc.setData(renderData);
       doc.render();
@@ -65,7 +82,5 @@ function generateWordDocument(data, outputPath) {
     }
   });
 }
-
-// ... (sua função formatDate existente) ...
 
 module.exports = { generateWordDocument };
