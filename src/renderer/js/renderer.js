@@ -9,6 +9,66 @@ let DADOS_DOENCAS = {}; // Armazena as doenças e testes carregados do banco de 
 let listView, formView, loadingView, laudosList, btnNew, btnList, btnCancel, laudoForm, btnManageDoencas, modalDoencasElement, modalDoencas, doencasManagementContent;
 
 // --- FUNÇÕES AUXILIARES ---
+// NOVA FUNÇÃO PARA CONVERTER NÚMERO PARA VALOR POR EXTENSO
+function numeroParaExtenso(numero) {
+    if (numero === null || numero === undefined) return '';
+    
+    const porExtenso = {
+        centavos: { 1: 'um centavo', 2: 'dois centavos', default: 'centavos' },
+        reais: { 1: 'um real', 2: 'dois reais', default: 'reais' },
+        unidades: ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez', 'onze', 'doze', 'treze', 'catorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'],
+        dezenas: ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'],
+        centenas: ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'],
+        milhares: { 1: 'mil', default: 'mil' }
+    };
+
+    function getExtenso(n, isMilhar = false) {
+        if (isNaN(n) || n === 0) return '';
+        if (n < 20) return porExtenso.unidades[n];
+        if (n < 100) {
+            const dezena = Math.floor(n / 10);
+            const unidade = n % 10;
+            return porExtenso.dezenas[dezena] + (unidade > 0 ? ' e ' + porExtenso.unidades[unidade] : '');
+        }
+        if (n < 1000) {
+            const centena = Math.floor(n / 100);
+            const resto = n % 100;
+            if (centena === 1 && resto === 0 && !isMilhar) return 'cem';
+            return porExtenso.centenas[centena] + (resto > 0 ? ' e ' + getExtenso(resto) : '');
+        }
+        return '';
+    }
+
+    const [reais, centavos] = parseFloat(numero).toFixed(2).split('.').map(Number);
+    let strReais = '', strCentavos = '';
+
+    if (reais > 0) {
+        if (reais >= 1000) {
+            const mil = Math.floor(reais / 1000);
+            const resto = reais % 1000;
+            if (mil === 1) strReais = porExtenso.milhares[1];
+            else strReais = getExtenso(mil, true) + ' ' + porExtenso.milhares.default;
+            if (resto > 0) strReais += (resto < 100 || resto % 100 === 0) ? ' e ' + getExtenso(resto) : ', ' + getExtenso(resto);
+        } else {
+            strReais = getExtenso(reais);
+        }
+        const plural = reais > 1 ? porExtenso.reais.default : porExtenso.reais[1];
+        strReais += ' ' + plural;
+    }
+
+    if (centavos > 0) {
+        strCentavos = getExtenso(centavos);
+        const plural = centavos > 1 ? porExtenso.centavos.default : porExtenso.centavos[1];
+        strCentavos += ' ' + plural;
+    }
+    
+    if (reais > 0 && centavos > 0) return strReais + ' e ' + strCentavos;
+    if (reais > 0) return strReais;
+    if (centavos > 0) return strCentavos;
+    
+    return 'zero reais';
+}
+
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -304,6 +364,7 @@ function setupFormLogic() {
         processo: document.getElementById('numero_processo'),
         cpf: document.getElementById('cpf'),
         valorHonorarios: document.getElementById('valor_honorarios'),
+        valorPorExtenso: document.getElementById('valor_por_extenso'), // Adicionado
         dataNascimento: document.getElementById('data_nascimento'),
         idade: document.getElementById('idade'),
         peso: document.getElementById('peso'),
@@ -334,32 +395,31 @@ function setupFormLogic() {
                 mapToRadix: ['.']
             };
 
-            if (inputs.valorHonorarios) IMaskLib(inputs.valorHonorarios, {...numberMaskOptions, thousandsSeparator: '.'});
+            // --- ALTERAÇÃO AQUI: máscara de honorários corrigida ---
+            if (inputs.valorHonorarios) {
+                IMaskLib(inputs.valorHonorarios, {
+                    ...numberMaskOptions,
+                    thousandsSeparator: '.',
+                    padFractionalZeros: true // <-- Isso força a exibição do ",00"
+                });
+            }
+
             if (inputs.peso) IMaskLib(inputs.peso, numberMaskOptions);
 
-            // MÁSCARA ESPECÍFICA PARA ALTURA
             if (inputs.altura) {
                 IMaskLib(inputs.altura, {
                     mask: function (value) {
-                        // Remove tudo que não é número
                         const cleanValue = value.replace(/\D/g, '');
-                        
                         if (cleanValue.length === 0) return { value: '' };
-                        
-                        // Se tiver 3 dígitos ou mais, formata como 1,80
                         if (cleanValue.length >= 3) {
                             const metros = cleanValue.slice(0, -2);
                             const centimetros = cleanValue.slice(-2);
                             return { value: `${metros},${centimetros}` };
-                        }
-                        // Se tiver 1 ou 2 dígitos, assume que são centímetros (0,XX)
-                        else {
+                        } else {
                             return { value: `0,${cleanValue.padStart(2, '0')}` };
                         }
                     },
-                    // Função para converter o valor formatado de volta para número puro
-                    commit: function(value, masked) {
-                        // Remove a vírgula e zeros à esquerda desnecessários
+                    commit: function(value) {
                         return value.replace(',', '').replace(/^0+/, '');
                     }
                 });
@@ -373,6 +433,21 @@ function setupFormLogic() {
         console.error('[renderer] falha ao carregar IMask:', err);
         showNotification('A biblioteca de máscaras não pôde ser carregada.', 'error');
     });
+
+    // --- ALTERAÇÃO AQUI: Lógica para preencher valor por extenso ---
+    if (inputs.valorHonorarios && inputs.valorPorExtenso) {
+        inputs.valorHonorarios.addEventListener('blur', (event) => {
+            const valor = event.target.value;
+            // Converte o valor formatado (ex: "1.800,00") para um número (ex: 1800.00)
+            const numero = parseFloat(valor.replace(/\./g, '').replace(',', '.'));
+            
+            if (!isNaN(numero)) {
+                inputs.valorPorExtenso.value = numeroParaExtenso(numero);
+            } else {
+                inputs.valorPorExtenso.value = ''; // Limpa o campo se o valor for inválido
+            }
+        });
+    }
 
     const calcularIMC = () => {
         if (!inputs.altura || !inputs.peso || !inputs.imc) return;
