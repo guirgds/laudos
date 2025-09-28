@@ -1,6 +1,6 @@
 // src/main/main.js
 
-const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, shell } = require('electron'); 
 const fs = require('fs');
 const path = require('path');
 const db = require('../../database/db');
@@ -163,7 +163,7 @@ ipcMain.handle('export-word', async (event, laudoData) => {
 
     // Chama a função que gera o documento
     await generateWordDocument(laudoData, filePath);
-
+    await shell.openPath(filePath); 
     return { success: true, path: filePath };
 
   } catch (error) {

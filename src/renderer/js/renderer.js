@@ -91,9 +91,7 @@ function formatarAltura(valor) {
 
 function loadIMaskOnce() {
     return new Promise((resolve, reject) => {
-        if (window.IMask) {
-            return resolve(window.IMask);
-        }
+        if (window.IMask) return resolve(window.IMask);
         const sources = ['js/imask.min.js', 'https://unpkg.com/imask'];
         let i = 0;
         function tryLoad() {
@@ -101,18 +99,11 @@ function loadIMaskOnce() {
             const src = sources[i++];
             const s = document.createElement('script');
             s.src = src;
-            s.onload = () => {
-                setTimeout(() => {
-                    if (window.IMask) {
-                        resolve(window.IMask);
-                    } else {
-                        tryLoad();
-                    }
-                }, 50);
-            };
-            s.onerror = () => {
-                tryLoad();
-            };
+            s.onload = () => setTimeout(() => {
+                if (window.IMask) resolve(window.IMask);
+                else tryLoad();
+            }, 50);
+            s.onerror = () => tryLoad();
             document.head.appendChild(s);
         }
         tryLoad();
@@ -124,7 +115,6 @@ function setupQuesitosUI() {
     if (!container) return;
     const quesitoTemplate = (type, title) => `<div class="mb-3"><h5>${title}</h5><div id="quesitos-${type}-list" class="quesitos-list"></div><button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-type="${type}">Adicionar Pergunta</button></div>`;
     
-    // CORREÇÃO: Ordem e lógica corrigidas
     container.innerHTML = quesitoTemplate('juizo', 'Quesitos do Juízo');
     container.innerHTML += quesitoTemplate('reclamante', 'Quesitos do Reclamante');
     container.innerHTML += quesitoTemplate('reclamada', 'Quesitos da Reclamada');
@@ -670,6 +660,14 @@ async function saveOrUpdateLaudo() {
         formData.exames_especificos = JSON.stringify(examesEspecificosData);
     }
     
+    Object.values(DADOS_DOENCAS).forEach(doenca => {
+        doenca.testes.forEach(teste => {
+            if (formData.hasOwnProperty(teste.test_id)) {
+                delete formData[teste.test_id];
+            }
+        });
+    });
+
     formData.fotos_paths = JSON.stringify(currentPhotoPaths);
     formData.exames_complementares = JSON.stringify(getExamesFromDOM());
     formData.passado_laboral = JSON.stringify(getPassadoLaboralFromDOM());

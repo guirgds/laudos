@@ -39,36 +39,33 @@ function generateWordDocument(data, outputPath) {
 
       const renderData = { ...data };
 
-      if (renderData.fotos_paths) {
-        try {
-          renderData.fotos = JSON.parse(renderData.fotos_paths);
-        } catch (e) {
-          renderData.fotos = [];
-        }
+      // --- BLOCO DE PROCESSAMENTO DE DADOS JSON (MAIS SEGURO) ---
+      const parseJson = (jsonString, fallback = []) => {
+          if (!jsonString) return fallback;
+          try {
+              return JSON.parse(jsonString);
+          } catch(e) {
+              console.error("Erro ao processar JSON:", e);
+              return fallback;
+          }
+      };
+
+      renderData.fotos = parseJson(renderData.fotos_paths);
+      renderData.quesitos_juizo = parseJson(renderData.quesitos_juizo).filter(q => q.pergunta || q.resposta);
+      renderData.quesitos_reclamante = parseJson(renderData.quesitos_reclamante).filter(q => q.pergunta || q.resposta);
+      renderData.quesitos_reclamada = parseJson(renderData.quesitos_reclamada).filter(q => q.pergunta || q.resposta);
+      renderData.exames_complementares = parseJson(renderData.exames_complementares);
+      renderData.passado_laboral = parseJson(renderData.passado_laboral);
+      
+      let examesData = parseJson(renderData.exames_especificos, { modelo: '', testes: [] });
+      if (examesData && examesData.testes) {
+          examesData.testes = Object.entries(examesData.testes).map(([key, value]) => ({ key, value }));
       }
+      renderData.exames_especificos = examesData;
+      // --- FIM DO BLOCO DE PROCESSAMENTO ---
       
       if (renderData.data_laudo) {
         renderData.data_laudo = `Porto Alegre, ${formatDateToExtensive(renderData.data_laudo)}`;
-      }
-      
-      // Lógica completa e correta para todos os quesitos
-      try {
-        const parseQuesitos = (quesitosStr) => {
-          if (!quesitosStr) return [];
-          const quesitos = JSON.parse(quesitosStr);
-          // Filtra itens que são completamente vazios
-          return quesitos.filter(q => q.pergunta || q.resposta);
-        };
-        
-        renderData.quesitos_juizo = parseQuesitos(renderData.quesitos_juizo);
-        renderData.quesitos_reclamante = parseQuesitos(renderData.quesitos_reclamante);
-        renderData.quesitos_reclamada = parseQuesitos(renderData.quesitos_reclamada);
-
-      } catch (e) {
-        console.error("Erro ao processar quesitos:", e);
-        renderData.quesitos_juizo = [];
-        renderData.quesitos_reclamante = [];
-        renderData.quesitos_reclamada = [];
       }
 
       doc.setData(renderData);
@@ -80,7 +77,7 @@ function generateWordDocument(data, outputPath) {
       console.log(`Documento gerado com sucesso em: ${outputPath}`);
       resolve({ success: true, path: outputPath });
 
-    } catch (error)      {
+    } catch (error) {
       console.error("Erro ao gerar o documento Word:", error);
       reject(error);
     }
