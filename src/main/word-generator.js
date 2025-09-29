@@ -4,25 +4,22 @@ const fs = require('fs');
 const path = require('path');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
+const ImageModule = require("docxtemplater-image-module-free");
 
 function formatDateToExtensive(dateString) {
   if (!dateString) return '';
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '';
-    return date.toLocaleDateString('pt-BR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  } catch (e) {
-    return '';
-  }
+    return date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch (e) { return ''; }
 }
 
 function generateWordDocument(data, outputPath) {
   return new Promise((resolve, reject) => {
     try {
+      console.log("📝 Iniciando geração do documento Word com imagens...");
+      
       const templatePath = path.join(__dirname, '../../assets/molde-laudo.docx');
       
       if (!fs.existsSync(templatePath)) {
@@ -32,12 +29,27 @@ function generateWordDocument(data, outputPath) {
       const content = fs.readFileSync(templatePath, 'binary');
       const zip = new PizZip(content);
       
+      const imageOpts = {
+        centered: false,
+        // A função getImage recebe o valor da tag (o caminho do arquivo) 
+        // e deve retornar o conteúdo da imagem como um Buffer.
+        getImage: (tagValue) => {
+          if (tagValue && fs.existsSync(tagValue)) {
+            return fs.readFileSync(tagValue);
+          }
+          return null; // Retorna nulo se o arquivo não existir
+        },
+        // Define um tamanho padrão para todas as imagens no documento
+        getSize: () => [450, 300], // [largura, altura] em pixels
+      };
+      
       const doc = new Docxtemplater(zip, {
+        modules: [new ImageModule(imageOpts)],
         paragraphLoop: true,
         linebreaks: true,
       });
 
-      // Preparar dados básicos
+      // --- Preparação dos Dados ---
       const renderData = { 
         vara_trabalho: data.vara_trabalho || '',
         cidade: data.cidade || '',
@@ -61,90 +73,59 @@ function generateWordDocument(data, outputPath) {
         exame_fisico_geral: data.exame_fisico_geral || '',
         apto_trabalho: data.apto_trabalho || '',
         conclusao: data.conclusao || '',
-        apto: data.apto || '',
         data_pericia: data.data_pericia || '',
         hora_pericia: data.hora_pericia || '',
         valor_honorarios: data.valor_honorarios || '',
         valor_por_extenso: data.valor_por_extenso || ''
       };
 
-      // Data formatada
       if (data.data_laudo) {
         renderData.data_laudo = `Porto Alegre, ${formatDateToExtensive(data.data_laudo)}`;
       }
 
-      // CORREÇÃO: ESTRUTURA ANINHADA CORRETA
-      console.log("📊 Dados brutos de exames_especificos:", data.exames_especificos);
-      
-      if (data.exames_especificos && typeof data.exames_especificos === 'object') {
-        // ESTRUTURA CORRETA PARA TEMPLATE ANINHADO
-        renderData.exames_especificos = {
-          modelo: data.exames_especificos.modelo || '',
-          testes: []
-        };
-        
-        // Processar testes se existirem
-        if (data.exames_especificos.testes && typeof data.exames_especificos.testes === 'object') {
-          renderData.exames_especificos.testes = Object.entries(data.exames_especificos.testes).map(([key, value]) => {
-            return {
-              key: key || '',
-              value: value || ''
-            };
-          });
-        }
-      } else {
-        // Estrutura vazia mas válida
-        renderData.exames_especificos = {
-          modelo: '',
-          testes: []
-        };
-      }
-
-      console.log("✅ Estrutura final de exames_especificos:");
-      console.log(JSON.stringify(renderData.exames_especificos, null, 2));
-
-      // Processar arrays simples
       const safeParse = (value, fallback = []) => {
         if (!value) return fallback;
         if (Array.isArray(value)) return value;
-        if (typeof value === 'object') return value;
-        if (typeof value === 'string') {
-          try {
-            return JSON.parse(value);
-          } catch(e) {
-            return fallback;
-          }
-        }
-        return fallback;
+        try { return JSON.parse(value); } catch { return fallback; }
       };
 
-      renderData.quesitos_juizo = safeParse(data.quesitos_juizo).filter(q => q && (q.pergunta || q.resposta));
-      renderData.quesitos_reclamante = safeParse(data.quesitos_reclamante).filter(q => q && (q.pergunta || q.resposta));
-      renderData.quesitos_reclamada = safeParse(data.quesitos_reclamada).filter(q => q && (q.pergunta || q.resposta));
+      // Processa todos os outros dados complexos
+      renderData.quesitos_juizo = safeParse(data.quesitos_juizo);
+      renderData.quesitos_reclamante = safeParse(data.quesitos_reclamante);
+      renderData.quesitos_reclamada = safeParse(data.quesitos_reclamada);
       renderData.exames_complementares = safeParse(data.exames_complementares);
       renderData.passado_laboral = safeParse(data.passado_laboral);
+      
+      const examesData = safeParse(data.exames_especificos, { modelo: '', testes: {} });
+        renderData.exames_especificos = {
+            modelo: examesData.modelo || '',
+            testes: Object.entries(examesData.testes || {}).map(([key, value]) => ({ key, value }))
+        };
 
-      // FOTOS - vazias por enquanto
-      renderData.fotos = [];
-
-      console.log("Renderizando documento...");
-      doc.setData(renderData);
-      doc.render();
+      // --- Lógica Final e Corrigida para as Fotos ---
+      // 1. Lê os caminhos das fotos a partir dos dados.
+      const fotoPaths = safeParse(data.fotos_paths);
+      // 2. Transforma o array de caminhos em um array de objetos.
+      //    Isso torna a tag no template explícita e menos propensa a erros.
+      renderData.fotos = fotoPaths.map(p => ({ image: p }));
+      
+      console.log(`🎯 Renderizando documento com ${renderData.fotos.length} fotos...`);
+      
+      // 3. Passa os dados diretamente para o método .render()
+      doc.render(renderData);
 
       const buf = doc.getZip().generate({ type: 'nodebuffer' });
-      
-      const outputDir = path.dirname(outputPath);
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-      
       fs.writeFileSync(outputPath, buf);
 
-      console.log(`✅ Documento gerado com sucesso em: ${outputPath}`);
-      resolve({ success: true, path: outputPath });
+      console.log(`✅ Documento Word gerado com sucesso em: ${outputPath}`);
+      resolve({ 
+        success: true, 
+        path: outputPath,
+        message: "Laudo exportado com sucesso (com imagens)"
+      });
 
     } catch (error) {
-      console.error("❌ Erro ao gerar documento:", error);
+      console.error("❌ Erro CRÍTICO ao gerar documento Word:", error);
       reject(error);
     }
   });

@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "docxtemplater": "^3.66.3",
-    "docxtemplater-image-module": "^3.1.0",
+    "docxtemplater-image-module-free": "^1.1.1",
     "pizzip": "^3.2.0",
     "sqlite3": "^5.1.6"
   },
