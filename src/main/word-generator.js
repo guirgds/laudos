@@ -15,32 +15,45 @@ function formatDateToExtensive(dateString) {
   } catch (e) { return ''; }
 }
 
+/**
+ * Agrupa um array de fotos em pares para exibição em uma tabela de duas colunas.
+ * @param {string[]} photoPaths Array com os caminhos das fotos.
+ * @returns {Array<Object>} Array de objetos, onde cada objeto representa uma linha da tabela.
+ * Exemplo de retorno: [ { col1: 'path1.jpg', col2: 'path2.jpg' }, { col1: 'path3.jpg', col2: null } ]
+ */
+function groupPhotosInPairs(photoPaths) {
+  const photoRows = [];
+  for (let i = 0; i < photoPaths.length; i += 2) {
+    photoRows.push({
+      col1: photoPaths[i],      // A foto na primeira coluna
+      col2: photoPaths[i + 1] || null, // A foto na segunda coluna (ou nulo se for ímpar)
+    });
+  }
+  return photoRows;
+}
+
 function generateWordDocument(data, outputPath) {
   return new Promise((resolve, reject) => {
     try {
-      console.log("📝 Iniciando geração do documento Word com imagens...");
+      console.log("📝 Iniciando geração do documento Word...");
       
       const templatePath = path.join(__dirname, '../../assets/molde-laudo.docx');
-      
-      if (!fs.existsSync(templatePath)) {
-        throw new Error(`Template não encontrado: ${templatePath}`);
-      }
+      if (!fs.existsSync(templatePath)) throw new Error(`Template não encontrado: ${templatePath}`);
 
       const content = fs.readFileSync(templatePath, 'binary');
       const zip = new PizZip(content);
       
       const imageOpts = {
-        centered: false,
-        // A função getImage recebe o valor da tag (o caminho do arquivo) 
-        // e deve retornar o conteúdo da imagem como um Buffer.
+        centered: true,
         getImage: (tagValue) => {
+          // Retorna nulo se tagValue for nulo (célula vazia) ou se o arquivo não existir
           if (tagValue && fs.existsSync(tagValue)) {
             return fs.readFileSync(tagValue);
           }
-          return null; // Retorna nulo se o arquivo não existir
+          return null;
         },
-        // Define um tamanho padrão para todas as imagens no documento
-        getSize: () => [450, 300], // [largura, altura] em pixels
+        // Tamanho um pouco menor para caberem 2 fotos lado a lado confortavelmente
+        getSize: () => [300, 225], 
       };
       
       const doc = new Docxtemplater(zip, {
@@ -88,41 +101,32 @@ function generateWordDocument(data, outputPath) {
         if (Array.isArray(value)) return value;
         try { return JSON.parse(value); } catch { return fallback; }
       };
-
-      // Processa todos os outros dados complexos
+      
+      // Processa todos os outros dados
       renderData.quesitos_juizo = safeParse(data.quesitos_juizo);
       renderData.quesitos_reclamante = safeParse(data.quesitos_reclamante);
       renderData.quesitos_reclamada = safeParse(data.quesitos_reclamada);
       renderData.exames_complementares = safeParse(data.exames_complementares);
       renderData.passado_laboral = safeParse(data.passado_laboral);
-      
       const examesData = safeParse(data.exames_especificos, { modelo: '', testes: {} });
-        renderData.exames_especificos = {
-            modelo: examesData.modelo || '',
-            testes: Object.entries(examesData.testes || {}).map(([key, value]) => ({ key, value }))
-        };
+      renderData.exames_especificos = {
+          modelo: examesData.modelo || '',
+          testes: Object.entries(examesData.testes || {}).map(([key, value]) => ({ key, value }))
+      };
 
       // --- Lógica Final e Corrigida para as Fotos ---
-      // 1. Lê os caminhos das fotos a partir dos dados.
       const fotoPaths = safeParse(data.fotos_paths);
-      // 2. Transforma o array de caminhos em um array de objetos.
-      //    Isso torna a tag no template explícita e menos propensa a erros.
-      renderData.fotos = fotoPaths.map(p => ({ image: p }));
+      // Usamos a nova função para agrupar as fotos em pares (linhas de tabela)
+      renderData.fotos = groupPhotosInPairs(fotoPaths);
       
-      console.log(`🎯 Renderizando documento com ${renderData.fotos.length} fotos...`);
-      
-      // 3. Passa os dados diretamente para o método .render()
+      console.log(`🎯 Renderizando documento com ${fotoPaths.length} fotos em ${renderData.fotos.length} linhas...`);
       doc.render(renderData);
 
       const buf = doc.getZip().generate({ type: 'nodebuffer' });
       fs.writeFileSync(outputPath, buf);
 
       console.log(`✅ Documento Word gerado com sucesso em: ${outputPath}`);
-      resolve({ 
-        success: true, 
-        path: outputPath,
-        message: "Laudo exportado com sucesso (com imagens)"
-      });
+      resolve({ success: true, path: outputPath });
 
     } catch (error) {
       console.error("❌ Erro CRÍTICO ao gerar documento Word:", error);
