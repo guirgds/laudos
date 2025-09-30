@@ -150,9 +150,14 @@ ipcMain.handle('update-doenca', async (event, doencaData) => {
 
 ipcMain.handle('export-word', async (event, laudoData) => {
   try {
+    // Sanitiza o número do processo para ser um nome de arquivo válido
+    // Substitui caracteres inválidos (qualquer coisa que não seja letra, número, ponto ou traço) por '_'
+    const sanitizedProcessNumber = (laudoData.numero_processo || 'laudo').replace(/[^a-zA-Z0-9.-]/g, '_');
+
     const { filePath } = await dialog.showSaveDialog(mainWindow, {
       title: 'Salvar Laudo',
-      defaultPath: `laudo-${laudoData.reclamante.replace(/\s/g, '_') || 'laudo'}.docx`,
+      // Agora o nome padrão do arquivo é o número do processo sanitizado
+      defaultPath: `${sanitizedProcessNumber}.docx`,
       filters: [{ name: 'Documentos Word', extensions: ['docx'] }],
     });
 
@@ -161,7 +166,6 @@ ipcMain.handle('export-word', async (event, laudoData) => {
       return { success: false, error: 'Operação cancelada' };
     }
 
-    // Chama a função que gera o documento
     await generateWordDocument(laudoData, filePath);
     await shell.openPath(filePath); 
     return { success: true, path: filePath };
